@@ -6,13 +6,16 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../colors.dart';
 import '../../widgets/app_bar_for_home.dart';
-import '../admin/search_scan.dart';
+// import '../admin/search_scan.dart';
 import '../chatBot.dart';
+// import '../treatment/home_treatment.dart';
 import '../treatment/home_treatment.dart';
 import 'diet_fitness_screen_user.dart';
 import 'userHospital/user_hospital_type.dart';
 import 'user_doctor_category.dart';
-import 'user_pharmacy.dart';
+// import 'userHospital/user_hospital_type.dart';
+// import 'user_doctor_category.dart';
+// import 'user_pharmacy.dart';
 
 class UserHome extends StatefulWidget {
   const UserHome({super.key});
@@ -355,25 +358,29 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
         'icon': MdiIcons.pill,
         'title': 'Treatment',
         'color': Colors.orangeAccent,
-        'onTap': () => Get.to(() => const ExampleAlarmHomeScreen()),
+        'onTap': () => Get.to(() => const UserHome()),
+        // 'onTap': () => Get.to(() => const ExampleAlarmHomeScreen()),
       },
       {
         'icon': MdiIcons.hospital,
         'title': 'Hospitals',
         'color': Colors.blueAccent,
-        'onTap': () => Get.to(() => UserHospitalType()),
+        'onTap': () => Get.to(() => UserHome()),
+        // 'onTap': () => Get.to(() => UserHospitalType()),
       },
       {
         'icon': MdiIcons.doctor,
         'title': 'Doctors',
         'color': Colors.greenAccent.shade700,
-        'onTap': () => Get.to(() => const UserDoctorCategory()),
+        'onTap': () => Get.to(() => const UserHome()),
+        // 'onTap': () => Get.to(() => const UserDoctorCategory()),
       },
       {
         'icon': MdiIcons.medicalBag,
         'title': 'Pharmacy',
         'color': Colors.purpleAccent,
-        'onTap': () => Get.to(() => const UserPharmacy()),
+        'onTap': () => Get.to(() => const UserHome()),
+        // 'onTap': () => Get.to(() => const UserPharmacy()),
       },
     ];
 
@@ -475,13 +482,13 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
         'image': 'assets/images/botimage.jpg',
         'onTap': () => Get.to(() => const ChatScreen()),
       },
-      {
-        'icon': MdiIcons.cameraOutline,
-        'title': 'Search by Scan',
-        'description': 'Identify medicines with your camera',
-        'image': 'assets/images/search&scan.jpg',
-        'onTap': () => Get.to(() => SearchScan()),
-      },
+      // {
+      //   'icon': MdiIcons.cameraOutline,
+      //   'title': 'Search by Scan',
+      //   'description': 'Identify medicines with your camera',
+      //   'image': 'assets/images/search&scan.jpg',
+      //   // 'onTap': () => Get.to(() => SearchScan()),
+      // },
     ];
 
     return ListView.builder(
@@ -684,13 +691,13 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
         Get.offAll(() => UserHome());
         break;
       case 1:
-        Get.to(() => ExampleAlarmHomeScreen());
+        // Get.to(() => ExampleAlarmHomeScreen());
         break;
       case 2:
-        Get.to(() => UserHospitalType());
+        // Get.to(() => UserHospitalType());
         break;
       case 3:
-        Get.to(() => UserDoctorCategory());
+        // Get.to(() => UserDoctorCategory());
         break;
     }
   }
