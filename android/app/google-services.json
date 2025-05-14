@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "794642314030",
+    "project_id": "gro-health-258fa",
+    "storage_bucket": "gro-health-258fa.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:794642314030:android:d3fb270df180f8545f80bf",
+        "android_client_info": {
+          "package_name": "com.example.grohealth"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBO_RI33kVSACZD4Y3gl04rD-4pjIKZqC4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
