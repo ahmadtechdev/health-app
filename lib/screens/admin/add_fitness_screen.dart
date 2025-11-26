@@ -7,7 +7,7 @@ import 'package:lottie/lottie.dart';
 import '../../colors.dart';
 import '../../widgets/app_bar.dart';
 import '../../widgets/btn.dart';
-import 'diet_fitness_screen.dart';
+import '../user/diet_fitness_screen_user.dart';
 
 class AddFitnessScreen extends StatefulWidget {
   const AddFitnessScreen({super.key});
@@ -17,187 +17,207 @@ class AddFitnessScreen extends StatefulWidget {
 }
 
 class _AddFitnessScreenState extends State<AddFitnessScreen> {
-
   final nameController = TextEditingController();
   final descController = TextEditingController();
-
   final _formKey = GlobalKey<FormState>();
-  User? userId = FirebaseAuth.instance.currentUser;
+  final User? userId = FirebaseAuth.instance.currentUser;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: TColors.background,
+      appBar: AppBar(
+        title: const Text(
+          "Add Fitness & Diet Plan",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: TColors.textPrimary,
+          ),
+        ),
+        backgroundColor: TColors.primary,
+        foregroundColor: TColors.white,
+        elevation: 0,
+      ),
       body: SingleChildScrollView(
-        child: Column(
-          children: [
-            CustomAppBar(
-              title: "Add Fitness & Diet Plan",
-              backButton: true,
-              signOutIcon: false,
-              backgroundColor: primary,
-              foregroundColor:
-              wColor, // Example of using a different background color
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 30.0),
-              child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  gradient: const LinearGradient(
+                    colors: [TColors.primary, TColors.accent],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: TColors.accent.withOpacity(0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
                 child: Column(
-                  children: [
-                    Container(
-                      alignment: Alignment.center,
-                      height: 250.0,
-                      child:
-                      Lottie.asset("assets/Animation - fitness.json"),
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text(
+                      'Share a category with users',
+                      style: TextStyle(
+                        color: TColors.white,
+                        fontSize: 14,
+                      ),
                     ),
-                    Form(
-                        key: _formKey,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            TextFormField(
-                              controller: nameController,
-                              style: const TextStyle(
-                                  color: primary, fontSize: 17.0),
-                              decoration: InputDecoration(
-                                  prefixIcon: Icon(Icons.title,
-                                      color: primary.withOpacity(0.6)),
-                                  // suffixIcon: Icon(Icons.email),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(25.0),
-                                    borderSide: const BorderSide(
-                                      color: primary,
-                                      width: 2.0,
-                                    ),
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(25.0),
-                                    borderSide: BorderSide(
-                                      color: primary.withOpacity(0.6),
-                                      width: 2.0,
-                                    ),
-                                  ),
-                                  labelText: 'Title',
-                                  labelStyle: TextStyle(
-                                      color: primary.withOpacity(0.8))),
-                              validator: (value) {
-                                if (value!.isEmpty) {
-                                  return "Please enter a Title";
-                                } else if (value.length < 3) {
-                                  return 'Name must be more than 2 character';
-                                }
-                                return null;
-                              },
-                            ),
-                            SizedBox(
-                              height: 10.0,
-                            ),
-
-
-
-
-
-                            TextFormField(
-                              controller: descController,
-                              style: const TextStyle(
-                                  color: primary, fontSize: 17.0),
-                              decoration: InputDecoration(
-                                  prefixIcon: Icon(Icons.description,
-                                      color: primary.withOpacity(0.6)),
-                                  // suffixIcon: Icon(Icons.email),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(25.0),
-                                    borderSide: const BorderSide(
-                                      color: primary,
-                                      width: 2.0,
-                                    ),
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(25.0),
-                                    borderSide: BorderSide(
-                                      color: primary.withOpacity(0.6),
-                                      width: 2.0,
-                                    ),
-                                  ),
-                                  labelText: 'Short Description',
-                                  labelStyle: TextStyle(
-                                      color: primary.withOpacity(0.8))),
-                            ),
-                            SizedBox(
-                              height: 20.0,
-                            ),
-                          ],
-                        )),
-                    RoundedButton(
-                        title: "Add Plan",
-                        icon: Icons.local_hospital,
-                        onTap: () async {
-                          if (_formKey.currentState!.validate()) {
-                            var name = nameController.text.trim();
-
-                            var desc = descController.text.trim();
-
-
-                            try {
-                              // Query Firebase to check if a doctor with the same name and phone exists
-                              var existingDoctor = await FirebaseFirestore.instance
-                                  .collection("fitness")
-                                  .where("title", isEqualTo: name)
-                                  .get();
-
-                              if (existingDoctor.docs.isNotEmpty) {
-                                // If a doctor with the same name and phone exists, show error message
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text("Title already exists"),
-                                    backgroundColor: Colors.red,
-                                    behavior: SnackBarBehavior.floating,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(22),
-                                    ),
-                                    margin: EdgeInsets.only(bottom: 12, right: 20, left: 20),
-                                  ),
-                                );
-                              } else {
-                                // If no existing doctor found, proceed with adding the doctor
-                                await FirebaseFirestore.instance
-                                    .collection("fitness")
-                                    .doc()
-                                    .set({
-                                  "createdAT": DateTime.now(),
-                                  "userId": userId?.uid,
-                                  "title": name,
-                                  "desc": desc,
-
-                                }).then((value) => {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text("Plan Successfully Added"),
-                                      backgroundColor: Colors.green,
-                                      behavior: SnackBarBehavior.floating,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(22),
-                                      ),
-                                      margin: EdgeInsets.only(bottom: 12, right: 20, left: 20),
-                                    ),
-                                  ),
-                                  Get.off(FitnessPlan()),
-                                });
-                              }
-                            } catch (e) {
-                              print("Error $e");
-                            }
-                          }
-                        }
+                    SizedBox(height: 8),
+                    Text(
+                      'Create a new plan',
+                      style: TextStyle(
+                        color: TColors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                    SizedBox(
-                      height: 10.0,
+                    SizedBox(height: 6),
+                    Text(
+                      'Provide a short description to help users understand the category.',
+                      style: TextStyle(
+                        color: TColors.white,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 24),
+              _buildTextField(
+                controller: nameController,
+                label: 'Title',
+                hint: 'e.g., Summer Shred Program',
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a title';
+                  }
+                  if (value.length < 3) {
+                    return 'Title must be at least 3 characters';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: descController,
+                label: 'Short Description',
+                hint: 'Quick overview of what this plan offers',
+                maxLines: 4,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a short description';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _handleSubmit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: TColors.primary,
+                    foregroundColor: TColors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: const Text(
+                    'Add Plan',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    String? hint,
+    int maxLines = 1,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      validator: validator,
+      maxLines: maxLines,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        filled: true,
+        fillColor: TColors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(color: TColors.background3),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(color: TColors.background3),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(color: TColors.accent, width: 1.8),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleSubmit() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    final name = nameController.text.trim();
+    final desc = descController.text.trim();
+
+    try {
+      final existing = await FirebaseFirestore.instance
+          .collection("fitness")
+          .where("title", isEqualTo: name)
+          .get();
+
+      if (existing.docs.isNotEmpty) {
+        _showSnack("Title already exists", TColors.error);
+        return;
+      }
+
+      await FirebaseFirestore.instance.collection("fitness").doc().set({
+        "createdAT": DateTime.now(),
+        "userId": userId?.uid,
+        "title": name,
+        "desc": desc,
+      });
+
+      _showSnack("Plan successfully added", TColors.success);
+      Get.off(const FitnessPlanUser());
+    } catch (e) {
+      _showSnack("Failed to add plan", TColors.error);
+    }
+  }
+
+  void _showSnack(String message, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
         ),
       ),
     );

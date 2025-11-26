@@ -9,7 +9,7 @@ import 'admin/adminHospital/admin_hospital_type.dart';
 import 'admin/admin_doctor_category.dart';
 import 'admin/admin_home_screen.dart';
 import 'admin/admin_pharmacy.dart';
-import 'admin/diet_fitness_screen.dart';
+import 'user/diet_fitness_screen_user.dart';
 import 'chatBot.dart';
 import 'treatment/home_treatment.dart';
 
@@ -126,7 +126,7 @@ class _NavBarState extends State<NavBar> {
                   fontSize: 17, color: primary, fontWeight: FontWeight.bold),
             ),
             onTap: () {
-              Get.to(() => const FitnessPlan());
+              Get.to(() => const FitnessPlanUser());
             },
           ),
 

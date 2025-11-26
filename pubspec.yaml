@@ -24,7 +24,7 @@ dependencies:
   alarm: ^3.0.14
   permission_handler: ^11.3.1
   image_picker: ^1.1.1
-  google_generative_ai: ^0.4.0
+  genai: ^0.0.1-dev.1
   intl: ^0.19.0
   flutter_animate: ^4.5.2
   flutter_staggered_animations: ^1.1.1

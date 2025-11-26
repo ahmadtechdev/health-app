@@ -1,11 +1,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 
 import '../../../colors.dart';
 import '../../../widgets/app_bar.dart';
-import '../../treatment/home_treatment.dart';
+import '../../../widgets/user_bottom_nav_bar.dart';
 import '../user_doctor_category.dart';
 import '../user_home_screen.dart';
 import 'user_hospitals_private.dart';
@@ -70,54 +69,10 @@ class _UserHospitalTypeState extends State<UserHospitalType> {
           ),
         ),
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border(top: BorderSide(color: primary, width: 2.0))),
-        child: BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: wColor,
-          items: <BottomNavigationBarItem>[
-            BottomNavigationBarItem(
-              icon: Icon(
-                Icons.home,
-              ),
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(MdiIcons.pill),
-              label: 'Treatment',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(
-                MdiIcons.hospital,
-              ),
-              label: 'Hospitals',
-            ),
-
-            BottomNavigationBarItem(
-              icon: Icon(MdiIcons.doctor),
-              label: 'Doctors',
-            ),
-          ],
-          currentIndex: 2,
-          selectedItemColor: primary,
-          unselectedItemColor: y1Color,
-          onTap: onTabTapped,
-        ),
+      bottomNavigationBar: const UserBottomNavBar(
+        initialIndex: 2,
       ),
     );
-  }
-  void onTabTapped(int index) {
-    if (index == 0) {
-      Get.to(() => UserHome());
-    } else if (index == 1) {
-      Get.to(() => ExampleAlarmHomeScreen());
-    } else if (index == 2) {
-      Get.to(() => UserHospitalType());
-    } else if (index == 3) {
-      Get.to(() => UserDoctorCategory());
-    }
   }
 
   Widget buildModuleContainer({

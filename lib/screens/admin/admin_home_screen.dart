@@ -13,7 +13,6 @@ import '../treatment/home_treatment.dart';
 import 'adminHospital/admin_hospital_type.dart';
 import 'admin_doctor_category.dart';
 import 'admin_pharmacy.dart';
-import 'diet_fitness_screen.dart';
 import 'search_scan.dart';
 
 class AdminHome extends StatefulWidget {
@@ -95,7 +94,7 @@ class _AdminHomeState extends State<AdminHome> {
                         image: 'assets/images/diet.jpg',
                         title: 'Diet & Fitness Plan',
                         onTap: () {
-                          Get.to(()=> FitnessPlan());
+                          // Get.to(()=> FitnessPlan());
                         },
                       ),
                       SizedBox(height: 20),

@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
@@ -7,6 +8,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../colors.dart';
 import '../../widgets/app_bar_for_home.dart';
 import '../admin/search_scan.dart';
+import '../authentication/signin_screen.dart';
 import '../chatBot.dart';
 import '../treatment/home_treatment.dart';
 import 'diet_fitness_screen_user.dart';
@@ -17,6 +19,7 @@ import '../../modules/barcode_scanner/scan_page.dart';
 import '../../modules/profile/profile_page.dart';
 import '../../modules/diary_dashboard/dashboard_page.dart';
 import '../../modules/profile/profile_controller.dart';
+import '../../widgets/user_bottom_nav_bar.dart';
 
 class UserHome extends StatefulWidget {
   const UserHome({super.key});
@@ -64,7 +67,7 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
           ],
         ),
       ),
-      bottomNavigationBar: _buildBottomNavBar(),
+      // bottomNavigationBar: _buildBottomNavBar(),
     );
   }
 
@@ -109,34 +112,7 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
             children: [
               IconButton(
                 icon: Icon(Icons.logout, color: TColors.accent),
-                onPressed: () {
-                  // Handle logout functionality
-                  showDialog(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return AlertDialog(
-                        title: Text('Logout'),
-                        content: Text('Are you sure you want to logout?'),
-                        actions: [
-                          TextButton(
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                            },
-                            child: Text('Cancel'),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              // Add your logout logic here
-                              Navigator.of(context).pop();
-                              // Navigate to login screen or perform logout
-                            },
-                            child: Text('Logout'),
-                          ),
-                        ],
-                      );
-                    },
-                  );
-                },
+                onPressed: _showLogoutDialog,
                 tooltip: 'Logout',
               ),
               const SizedBox(width: 8),
@@ -365,24 +341,24 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
         'color': Colors.orangeAccent,
         'onTap': () => Get.to(() => const ExampleAlarmHomeScreen()),
       },
-      {
-        'icon': MdiIcons.hospital,
-        'title': 'Hospitals',
-        'color': Colors.blueAccent,
-        'onTap': () => Get.to(() => UserHospitalType()),
-      },
-      {
-        'icon': MdiIcons.doctor,
-        'title': 'Doctors',
-        'color': Colors.greenAccent.shade700,
-        'onTap': () => Get.to(() => const UserDoctorCategory()),
-      },
-      {
-        'icon': MdiIcons.medicalBag,
-        'title': 'Pharmacy',
-        'color': Colors.purpleAccent,
-        'onTap': () => Get.to(() => const UserPharmacy()),
-      },
+      // {
+      //   'icon': MdiIcons.hospital,
+      //   'title': 'Hospitals',
+      //   'color': Colors.blueAccent,
+      //   'onTap': () => Get.to(() => UserHospitalType()),
+      // },
+      // {
+      //   'icon': MdiIcons.doctor,
+      //   'title': 'Doctors',
+      //   'color': Colors.greenAccent.shade700,
+      //   'onTap': () => Get.to(() => const UserDoctorCategory()),
+      // },
+      // {
+      //   'icon': MdiIcons.medicalBag,
+      //   'title': 'Pharmacy',
+      //   'color': Colors.purpleAccent,
+      //   'onTap': () => Get.to(() => const UserPharmacy()),
+      // },
       {
         'icon': MdiIcons.account,
         'title': 'Profile',
@@ -631,94 +607,48 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
   }
 
   Widget _buildBottomNavBar() {
-    final items = [
-      {'icon': Icons.home_outlined, 'label': 'Home'},
-      {'icon': MdiIcons.pill, 'label': 'Treatment'},
-      {'icon': MdiIcons.hospitalBuilding, 'label': 'Hospitals'},
-      {'icon': MdiIcons.doctor, 'label': 'Doctors'},
-    ];
+    return UserBottomNavBar(
+      initialIndex: _selectedIndex,
+    );
+  }
 
-    return Container(
-      height: 70,
-      decoration: BoxDecoration(
-        color: TColors.white,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: TColors.greyLight.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
+  void _showLogoutDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              await _handleLogout();
+            },
+            child: const Text('Logout'),
           ),
         ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: List.generate(items.length, (index) {
-          return InkWell(
-            onTap: () => _onNavItemTapped(index),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              padding: EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: _selectedIndex == index ? 12 : 8,
-              ),
-              decoration: BoxDecoration(
-                color: _selectedIndex == index
-                    ? TColors.primary.withOpacity(0.2)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    items[index]['icon'] as IconData,
-                    color: _selectedIndex == index
-                        ? TColors.primary
-                        : TColors.grey,
-                    size: 24,
-                  ),
-                  if (_selectedIndex == index) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      items[index]['label'] as String,
-                      style: TextStyle(
-                        color: TColors.primary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          );
-        }),
       ),
     );
   }
 
-  void _onNavItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-
-    switch (index) {
-      case 0:
-        Get.offAll(() => UserHome());
-        break;
-      case 1:
-        Get.to(() => ExampleAlarmHomeScreen());
-        break;
-      case 2:
-        Get.to(() => UserHospitalType());
-        break;
-      case 3:
-        Get.to(() => UserDoctorCategory());
-        break;
+  Future<void> _handleLogout() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      Get.offAll(() => const SignInScreen());
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to logout. Please try again.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: TColors.error.withOpacity(0.9),
+        colorText: TColors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+      );
     }
   }
 

@@ -1,5 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+
+import '../colors.dart';
 
 class ExampleAlarmTile extends StatelessWidget {
   final String title;
@@ -44,81 +45,113 @@ class ExampleAlarmTile extends StatelessWidget {
         ),
       ),
       onDismissed: (_) => onDismissed?.call(),
-      child: RawMaterialButton(
-
-        onPressed: onPressed,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onPressed,
         child: Container(
-          height: 150,
-          padding: const EdgeInsets.all(20),
-          margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+          margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+          padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(15),
-            gradient: LinearGradient(
+            borderRadius: BorderRadius.circular(20),
+            gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFF64B5F6), Color(0xFF1976D2)],
+              colors: [
+                TColors.primary,
+                TColors.accent,
+              ],
             ),
+            boxShadow: [
+              BoxShadow(
+                color: TColors.accent.withOpacity(0.25),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: TColors.white.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.medical_services_rounded,
+                  color: TColors.white,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(width: 16),
               Expanded(
-                flex: 2,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.medical_services,
-                          color: Colors.white,
-                          size: 0.08 * MediaQuery.of(context).size.width, // Adjusting icon size
-                        ),
-                        SizedBox(width: 10),
-                        Text(
-                          name,
-                          style: TextStyle(
-                            fontSize: 0.06 * MediaQuery.of(context).size.width, // Adjusting font size
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 5),
                     Text(
-                      amount + " " + unit,
-                      style: TextStyle(
-                        fontSize: 0.05 * MediaQuery.of(context).size.width, // Adjusting font size
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white,
+                      name,
+                      style: const TextStyle(
+                        color: TColors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                    SizedBox(height: 5),
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 0.04 * MediaQuery.of(context).size.width, // Adjusting font size
-                        fontWeight: FontWeight.w400,
-                        color: Colors.white,
+                    const SizedBox(height: 6),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _InfoChip(
+                            icon: Icons.timer_outlined,
+                            text: title,
+                          ),
+                          const SizedBox(width: 8),
+                          _InfoChip(
+                            icon: Icons.vaccines_outlined,
+                            text: '$amount $unit',
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
-              SizedBox(width: 20),
-              Icon(
-                Icons.keyboard_arrow_right_rounded,
-                size: 0.08 * MediaQuery.of(context).size.width, // Adjusting icon size
-                color: Colors.white,
-              ),
+
             ],
           ),
         ),
+      ),
+    );
+  }
+}
 
+class _InfoChip extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _InfoChip({required this.icon, required this.text});
 
-
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: TColors.white.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: TColors.white, size: 14),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: const TextStyle(
+              color: TColors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }
