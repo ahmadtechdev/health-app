@@ -13,6 +13,10 @@ import 'diet_fitness_screen_user.dart';
 import 'userHospital/user_hospital_type.dart';
 import 'user_doctor_category.dart';
 import 'user_pharmacy.dart';
+import '../../modules/barcode_scanner/scan_page.dart';
+import '../../modules/profile/profile_page.dart';
+import '../../modules/diary_dashboard/dashboard_page.dart';
+import '../../modules/profile/profile_controller.dart';
 
 class UserHome extends StatefulWidget {
   const UserHome({super.key});
@@ -33,6 +37,10 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
       setState(() {
         _selectedIndex = _tabController.index;
       });
+    });
+    // Check profile and show dialog if incomplete
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAndShowProfileDialog();
     });
   }
 
@@ -375,6 +383,18 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
         'color': Colors.purpleAccent,
         'onTap': () => Get.to(() => const UserPharmacy()),
       },
+      {
+        'icon': MdiIcons.account,
+        'title': 'Profile',
+        'color': TColors.primary,
+        'onTap': () => Get.to(() => const ProfilePage()),
+      },
+      {
+        'icon': MdiIcons.chartAreaspline,
+        'title': 'Diary Dashboard',
+        'color': Colors.teal,
+        'onTap': () => Get.to(() => const DiaryDashboardPage()),
+      },
     ];
 
     return GridView.builder(
@@ -382,7 +402,7 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 4,
-        childAspectRatio: 1,
+        childAspectRatio: 0.8,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
       ),
@@ -475,12 +495,19 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
         'image': 'assets/images/botimage.jpg',
         'onTap': () => Get.to(() => const ChatScreen()),
       },
+      // {
+      //   'icon': MdiIcons.cameraOutline,
+      //   'title': 'Search by Scan',
+      //   'description': 'Identify medicines with your camera',
+      //   'image': 'assets/images/search&scan.jpg',
+      //   'onTap': () => Get.to(() => SearchScan()),
+      // },
       {
-        'icon': MdiIcons.cameraOutline,
+        'icon': MdiIcons.barcodeScan,
         'title': 'Search by Scan',
-        'description': 'Identify medicines with your camera',
+        'description': 'Scan food barcodes for nutrition info',
         'image': 'assets/images/search&scan.jpg',
-        'onTap': () => Get.to(() => SearchScan()),
+        'onTap': () => Get.to(() => const ScanPage()),
       },
     ];
 
@@ -522,7 +549,7 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 110,
+        height: 130,
         decoration: BoxDecoration(
           color: TColors.white,
           borderRadius: BorderRadius.circular(16),
@@ -538,7 +565,7 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
           borderRadius: BorderRadius.circular(16),
           child: Row(
             children: [
-              Container(
+              SizedBox(
                 width: 110,
                 height: double.infinity,
                 child: Stack(
@@ -693,5 +720,155 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
         Get.to(() => UserDoctorCategory());
         break;
     }
+  }
+
+  /// Check if profile exists and show dialog if incomplete
+  Future<void> _checkAndShowProfileDialog() async {
+    try {
+      final profileController = Get.isRegistered<ProfileController>()
+          ? Get.find<ProfileController>()
+          : Get.put(ProfileController(), permanent: true);
+
+      await profileController.loadProfile();
+
+      if (!profileController.hasProfile && mounted) {
+        _showCompleteProfileDialog();
+      }
+    } catch (e) {
+      // Silently handle errors - don't show dialog if there's an issue
+      debugPrint('Error checking profile: $e');
+    }
+  }
+
+  /// Show complete profile dialog
+  void _showCompleteProfileDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // User must interact with dialog
+      builder: (BuildContext context) {
+        return WillPopScope(
+          onWillPop: () async => false, // Prevent back button from closing
+          child: Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: TColors.white,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Icon
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: TColors.primary.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.person_add_alt_1,
+                      size: 48,
+                      color: TColors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  // Title
+                  const Text(
+                    'Complete Your Profile',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: TColors.textPrimary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  // Message
+                  Text(
+                    'To get personalized health recommendations and track your calorie goals, please complete your profile.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: TColors.textSecondary,
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Action Buttons
+                  Row(
+                    children: [
+                      // Later Button
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            side: BorderSide(color: TColors.grey, width: 1),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            'Later',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: TColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      
+                      // Complete Profile Button
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            Get.to(() => const ProfilePage());
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: TColors.primary,
+                            foregroundColor: TColors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 2,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.arrow_forward, size: 20),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Complete Now',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 }
