@@ -19,6 +19,7 @@ import '../../modules/barcode_scanner/scan_page.dart';
 import '../../modules/profile/profile_page.dart';
 import '../../modules/diary_dashboard/dashboard_page.dart';
 import '../../modules/profile/profile_controller.dart';
+import '../../modules/meal_planning/meal_planning_screen.dart';
 import '../../widgets/user_bottom_nav_bar.dart';
 
 class UserHome extends StatefulWidget {
@@ -371,6 +372,12 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
         'color': Colors.teal,
         'onTap': () => Get.to(() => const DiaryDashboardPage()),
       },
+      {
+        'icon': MdiIcons.foodVariant,
+        'title': 'Meal Plan',
+        'color': Colors.orange,
+        'onTap': () => Get.to(() => const MealPlanningScreen()),
+      },
     ];
 
     return GridView.builder(
@@ -461,8 +468,15 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
         'icon': MdiIcons.meditation,
         'title': 'Diet & Fitness',
         'description': 'Personalized plans for your health',
-        'image': 'assets/images/diet.jpg',
+        'image': 'assets/images/diet_icon.png',
         'onTap': () => Get.to(() => FitnessPlanUser()),
+      },
+      {
+        'icon': MdiIcons.foodVariant,
+        'title': 'Meal Planning',
+        'description': 'AI-powered personalized meal plans',
+        'image': 'assets/images/diet.jpg',
+        'onTap': () => Get.to(() => const MealPlanningScreen()),
       },
       {
         'icon': MdiIcons.robot,

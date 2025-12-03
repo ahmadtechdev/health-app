@@ -164,8 +164,24 @@ class _AddDietScreenState extends State<AddDietScreen> {
 
       _showSnack("Plan added successfully", TColors.success);
       Get.back(result: true);
+    } on FirebaseException catch (e) {
+      String errorMessage = "Failed to add diet plan";
+      switch (e.code) {
+        case 'permission-denied':
+          errorMessage = "You do not have permission to perform this operation";
+          break;
+        case 'unavailable':
+          errorMessage = "The service is currently unavailable. Please try again later";
+          break;
+        case 'deadline-exceeded':
+          errorMessage = "The operation took too long. Please try again";
+          break;
+        default:
+          errorMessage = e.message ?? "Failed to add diet plan. Please try again";
+      }
+      _showSnack(errorMessage, TColors.error);
     } catch (e) {
-      _showSnack("Failed to add plan", TColors.error);
+      _showSnack("An unexpected error occurred. Please try again", TColors.error);
     }
   }
 

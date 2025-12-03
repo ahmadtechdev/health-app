@@ -346,8 +346,44 @@ class _AddHospitalScreenState extends State<AddHospitalScreen> {
                               }
 
 
+                            } on FirebaseException catch (e) {
+                              String errorMessage = "Failed to add hospital";
+                              switch (e.code) {
+                                case 'permission-denied':
+                                  errorMessage = "You do not have permission to perform this operation";
+                                  break;
+                                case 'unavailable':
+                                  errorMessage = "The service is currently unavailable. Please try again later";
+                                  break;
+                                case 'deadline-exceeded':
+                                  errorMessage = "The operation took too long. Please try again";
+                                  break;
+                                default:
+                                  errorMessage = e.message ?? "Failed to add hospital. Please try again";
+                              }
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(errorMessage),
+                                  backgroundColor: Colors.red,
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(22),
+                                  ),
+                                  margin: EdgeInsets.only(bottom: 12, right: 20, left: 20),
+                                ),
+                              );
                             } catch (e) {
-                              print("Error $e");
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text("An unexpected error occurred. Please try again"),
+                                  backgroundColor: Colors.red,
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(22),
+                                  ),
+                                  margin: EdgeInsets.only(bottom: 12, right: 20, left: 20),
+                                ),
+                              );
                             }
                           }
                         }),

@@ -24,6 +24,8 @@ class ProfileController extends GetxController {
   final _isSaving = false.obs;
   final _selectedGender = 'Male'.obs;
   final _selectedActivityLevel = 'Sedentary'.obs;
+  final _hasBPIssue = false.obs;
+  final _hasDiabetes = false.obs;
 
   // Getters
   ProfileModel? get profile => _profile.value;
@@ -31,6 +33,8 @@ class ProfileController extends GetxController {
   bool get isSaving => _isSaving.value;
   String get selectedGender => _selectedGender.value;
   String get selectedActivityLevel => _selectedActivityLevel.value;
+  bool get hasBPIssue => _hasBPIssue.value;
+  bool get hasDiabetes => _hasDiabetes.value;
   bool get hasProfile => _profile.value != null;
 
   // Gender options
@@ -69,6 +73,16 @@ class ProfileController extends GetxController {
     _selectedActivityLevel.value = level;
   }
 
+  /// Set BP issue status
+  void setHasBPIssue(bool value) {
+    _hasBPIssue.value = value;
+  }
+
+  /// Set diabetes status
+  void setHasDiabetes(bool value) {
+    _hasDiabetes.value = value;
+  }
+
   /// Load user profile from Firestore
   Future<void> loadProfile() async {
     final user = _auth.currentUser;
@@ -91,8 +105,24 @@ class ProfileController extends GetxController {
         _profile.value = ProfileModel.fromFirestore(doc.data()!);
         _populateForm();
       }
+    } on FirebaseException catch (e) {
+      String errorMessage = "Failed to load profile";
+      switch (e.code) {
+        case 'permission-denied':
+          errorMessage = "You do not have permission to view this profile";
+          break;
+        case 'unavailable':
+          errorMessage = "The service is currently unavailable. Please try again later";
+          break;
+        case 'deadline-exceeded':
+          errorMessage = "The operation took too long. Please try again";
+          break;
+        default:
+          errorMessage = e.message ?? "Failed to load profile. Please try again";
+      }
+      _showError(errorMessage);
     } catch (e) {
-      _showError('Failed to load profile: ${e.toString()}');
+      _showError('An unexpected error occurred. Please try again');
     } finally {
       _isLoading.value = false;
     }
@@ -109,6 +139,8 @@ class ProfileController extends GetxController {
     targetWeightController.text = p.targetWeight.toString();
     _selectedGender.value = p.gender;
     _selectedActivityLevel.value = p.activityLevel;
+    _hasBPIssue.value = p.hasBPIssue;
+    _hasDiabetes.value = p.hasDiabetes;
   }
 
   /// Validate form inputs
@@ -165,6 +197,8 @@ class ProfileController extends GetxController {
       final targetWeight = double.parse(targetWeightController.text.trim());
       final gender = _selectedGender.value;
       final activityLevel = _selectedActivityLevel.value;
+      final hasBPIssue = _hasBPIssue.value;
+      final hasDiabetes = _hasDiabetes.value;
 
       // Calculate calories
       final calories = CalorieFormula.calculateCalories(
@@ -186,6 +220,8 @@ class ProfileController extends GetxController {
         activityLevel: activityLevel,
         dailyCalories: calories['maintenance']!,
         goalCalories: calories['goal']!,
+        hasBPIssue: hasBPIssue,
+        hasDiabetes: hasDiabetes,
         createdAt: _profile.value?.createdAt ?? DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -202,8 +238,24 @@ class ProfileController extends GetxController {
       _profile.value = profile;
 
       _showSuccess('Profile saved successfully!');
+    } on FirebaseException catch (e) {
+      String errorMessage = "Failed to save profile";
+      switch (e.code) {
+        case 'permission-denied':
+          errorMessage = "You do not have permission to perform this operation";
+          break;
+        case 'unavailable':
+          errorMessage = "The service is currently unavailable. Please try again later";
+          break;
+        case 'deadline-exceeded':
+          errorMessage = "The operation took too long. Please try again";
+          break;
+        default:
+          errorMessage = e.message ?? "Failed to save profile. Please try again";
+      }
+      _showError(errorMessage);
     } catch (e) {
-      _showError('Failed to save profile: ${e.toString()}');
+      _showError('An unexpected error occurred. Please try again');
     } finally {
       _isSaving.value = false;
     }

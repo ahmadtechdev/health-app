@@ -101,8 +101,44 @@ class _DoctorInfoState extends State<DoctorInfo> {
         FirebaseAuth.instance.signOut(),
         Get.off(() => DoctorInfo()),
       });
-    } on FirebaseAuthException catch (e) {
-      print('Error: $e');
+    } on FirebaseException catch (e) {
+      String errorMessage = "Failed to book appointment";
+      switch (e.code) {
+        case 'permission-denied':
+          errorMessage = "You do not have permission to book appointments";
+          break;
+        case 'unavailable':
+          errorMessage = "The service is currently unavailable. Please try again later";
+          break;
+        case 'deadline-exceeded':
+          errorMessage = "The operation took too long. Please try again";
+          break;
+        default:
+          errorMessage = e.message ?? "Failed to book appointment. Please try again";
+      }
+      Get.snackbar(
+        'Error',
+        errorMessage,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: TColors.error.withOpacity(0.9),
+        colorText: TColors.white,
+        margin: EdgeInsets.all(15),
+        borderRadius: 10,
+        duration: Duration(seconds: 3),
+        icon: Icon(Icons.error_outline, color: TColors.white),
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'An unexpected error occurred. Please try again',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: TColors.error.withOpacity(0.9),
+        colorText: TColors.white,
+        margin: EdgeInsets.all(15),
+        borderRadius: 10,
+        duration: Duration(seconds: 3),
+        icon: Icon(Icons.error_outline, color: TColors.white),
+      );
     }
   }
 

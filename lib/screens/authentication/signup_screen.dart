@@ -192,8 +192,32 @@ class _SignUpScreenState extends State<SignUpScreen>
                   userPassword,
                 );
               });
+            } on FirebaseAuthException catch (e) {
+              String errorMessage = "An error occurred during sign up";
+              
+              switch (e.code) {
+                case 'email-already-in-use':
+                  errorMessage = "The email address is already in use by another account";
+                  break;
+                case 'invalid-email':
+                  errorMessage = "The email address is invalid";
+                  break;
+                case 'weak-password':
+                  errorMessage = "The password is too weak. Please use a stronger password";
+                  break;
+                case 'operation-not-allowed':
+                  errorMessage = "Email/password accounts are not enabled";
+                  break;
+                case 'too-many-requests':
+                  errorMessage = "Too many requests. Please try again later";
+                  break;
+                default:
+                  errorMessage = e.message ?? "An error occurred during sign up";
+              }
+              
+              _showMessage("Error", errorMessage, true);
             } catch (e) {
-              _showMessage("Error", e.toString(), true);
+              _showMessage("Error", "An unexpected error occurred. Please try again", true);
             } finally {
               setState(() {
                 isLoading = false;

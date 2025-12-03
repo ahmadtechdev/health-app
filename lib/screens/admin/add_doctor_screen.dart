@@ -478,8 +478,73 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
                                   );
                                 });
                               }
+                            } on FirebaseAuthException catch (e) {
+                              String errorMessage = "Failed to create doctor account";
+                              switch (e.code) {
+                                case 'email-already-in-use':
+                                  errorMessage = "This email is already registered";
+                                  break;
+                                case 'invalid-email':
+                                  errorMessage = "The email address is invalid";
+                                  break;
+                                case 'weak-password':
+                                  errorMessage = "The password is too weak";
+                                  break;
+                                case 'operation-not-allowed':
+                                  errorMessage = "Account creation is not allowed";
+                                  break;
+                                default:
+                                  errorMessage = e.message ?? "Failed to create doctor account";
+                              }
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(errorMessage),
+                                  backgroundColor: Colors.red,
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(22),
+                                  ),
+                                  margin: EdgeInsets.only(
+                                      bottom: 12, right: 20, left: 20),
+                                ),
+                              );
+                            } on FirebaseException catch (e) {
+                              String errorMessage = "Failed to save doctor information";
+                              switch (e.code) {
+                                case 'permission-denied':
+                                  errorMessage = "You do not have permission to perform this operation";
+                                  break;
+                                case 'unavailable':
+                                  errorMessage = "The service is currently unavailable. Please try again later";
+                                  break;
+                                default:
+                                  errorMessage = e.message ?? "Failed to save doctor information";
+                              }
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(errorMessage),
+                                  backgroundColor: Colors.red,
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(22),
+                                  ),
+                                  margin: EdgeInsets.only(
+                                      bottom: 12, right: 20, left: 20),
+                                ),
+                              );
                             } catch (e) {
-                              print("Error $e");
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text("An unexpected error occurred. Please try again"),
+                                  backgroundColor: Colors.red,
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(22),
+                                  ),
+                                  margin: EdgeInsets.only(
+                                      bottom: 12, right: 20, left: 20),
+                                ),
+                              );
                             }
                           }
                         }),

@@ -203,6 +203,10 @@ class ProfilePage extends StatelessWidget {
 
           // Activity Level
           _buildActivityLevelSelector(controller),
+          const SizedBox(height: 16),
+
+          // Health Conditions
+          _buildHealthConditions(controller),
         ],
       ),
     );
@@ -359,6 +363,94 @@ class ProfilePage extends StatelessWidget {
               }).toList(),
             )),
       ],
+    );
+  }
+
+  /// Build health conditions selector
+  Widget _buildHealthConditions(ProfileController controller) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Health Conditions',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: TColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Obx(() => Column(
+              children: [
+                _buildConditionCheckbox(
+                  controller: controller,
+                  label: 'Blood Pressure Issues',
+                  value: controller.hasBPIssue,
+                  onChanged: (value) => controller.setHasBPIssue(value),
+                  icon: MdiIcons.heartPulse,
+                ),
+                const SizedBox(height: 12),
+                _buildConditionCheckbox(
+                  controller: controller,
+                  label: 'Diabetes / Sugar',
+                  value: controller.hasDiabetes,
+                  onChanged: (value) => controller.setHasDiabetes(value),
+                  icon: MdiIcons.needle,
+                ),
+              ],
+            )),
+      ],
+    );
+  }
+
+  /// Build condition checkbox
+  Widget _buildConditionCheckbox({
+    required ProfileController controller,
+    required String label,
+    required bool value,
+    required Function(bool) onChanged,
+    required IconData icon,
+  }) {
+    return GestureDetector(
+      onTap: () => onChanged(!value),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: value
+              ? TColors.primary.withOpacity(0.1)
+              : TColors.background,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: value ? TColors.primary : TColors.background3,
+            width: value ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: value ? TColors.primary : TColors.grey,
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: value ? FontWeight.bold : FontWeight.normal,
+                  color: value ? TColors.primary : TColors.textSecondary,
+                ),
+              ),
+            ),
+            Checkbox(
+              value: value,
+              onChanged: (newValue) => onChanged(newValue ?? false),
+              activeColor: TColors.primary,
+            ),
+          ],
+        ),
+      ),
     );
   }
 

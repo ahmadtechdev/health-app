@@ -114,15 +114,38 @@ class _SignInScreenState extends State<SignInScreen> {
         });
 
         String errorMessage = "Authentication failed";
-        if (e.code == 'user-not-found') {
-          errorMessage = "No user found with this email";
-        } else if (e.code == 'wrong-password') {
-          errorMessage = "Wrong password provided";
-        } else if (e.code == 'invalid-credential') {
-          errorMessage = "Invalid email or password";
+        switch (e.code) {
+          case 'user-not-found':
+            errorMessage = "No user found with this email";
+            break;
+          case 'wrong-password':
+            errorMessage = "Wrong password provided";
+            break;
+          case 'invalid-credential':
+            errorMessage = "Invalid email or password";
+            break;
+          case 'invalid-email':
+            errorMessage = "The email address is invalid";
+            break;
+          case 'user-disabled':
+            errorMessage = "This user account has been disabled";
+            break;
+          case 'too-many-requests':
+            errorMessage = "Too many failed attempts. Please try again later";
+            break;
+          case 'operation-not-allowed':
+            errorMessage = "Email/password sign-in is not enabled";
+            break;
+          default:
+            errorMessage = e.message ?? "Authentication failed. Please try again";
         }
 
         _showErrorMessage(errorMessage);
+      } catch (e) {
+        setState(() {
+          _isLoading = false;
+        });
+        _showErrorMessage("An unexpected error occurred. Please try again");
       }
     }
   }

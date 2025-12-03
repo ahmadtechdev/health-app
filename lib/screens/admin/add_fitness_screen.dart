@@ -205,8 +205,24 @@ class _AddFitnessScreenState extends State<AddFitnessScreen> {
 
       _showSnack("Plan successfully added", TColors.success);
       Get.off(const FitnessPlanUser());
+    } on FirebaseException catch (e) {
+      String errorMessage = "Failed to add fitness plan";
+      switch (e.code) {
+        case 'permission-denied':
+          errorMessage = "You do not have permission to perform this operation";
+          break;
+        case 'unavailable':
+          errorMessage = "The service is currently unavailable. Please try again later";
+          break;
+        case 'deadline-exceeded':
+          errorMessage = "The operation took too long. Please try again";
+          break;
+        default:
+          errorMessage = e.message ?? "Failed to add fitness plan. Please try again";
+      }
+      _showSnack(errorMessage, TColors.error);
     } catch (e) {
-      _showSnack("Failed to add plan", TColors.error);
+      _showSnack("An unexpected error occurred. Please try again", TColors.error);
     }
   }
 

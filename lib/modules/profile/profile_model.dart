@@ -9,6 +9,8 @@ class ProfileModel {
   final String activityLevel; // 'Sedentary', 'Light', 'Moderate', 'Very Active'
   final double dailyCalories; // Calculated maintenance calories
   final double goalCalories; // Adjusted calories based on goal
+  final bool hasBPIssue; // Blood pressure issue
+  final bool hasDiabetes; // Diabetes condition
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -21,6 +23,8 @@ class ProfileModel {
     required this.activityLevel,
     required this.dailyCalories,
     required this.goalCalories,
+    this.hasBPIssue = false,
+    this.hasDiabetes = false,
     this.createdAt,
     this.updatedAt,
   });
@@ -36,6 +40,8 @@ class ProfileModel {
       activityLevel: data['activityLevel'] as String,
       dailyCalories: (data['dailyCalories'] as num).toDouble(),
       goalCalories: (data['goalCalories'] as num).toDouble(),
+      hasBPIssue: data['hasBPIssue'] as bool? ?? false,
+      hasDiabetes: data['hasDiabetes'] as bool? ?? false,
       createdAt: data['createdAt']?.toDate() as DateTime?,
       updatedAt: data['updatedAt']?.toDate() as DateTime?,
     );
@@ -52,6 +58,8 @@ class ProfileModel {
       'activityLevel': activityLevel,
       'dailyCalories': dailyCalories,
       'goalCalories': goalCalories,
+      'hasBPIssue': hasBPIssue,
+      'hasDiabetes': hasDiabetes,
       'createdAt': createdAt ?? DateTime.now(),
       'updatedAt': DateTime.now(),
     };
@@ -67,6 +75,8 @@ class ProfileModel {
     String? activityLevel,
     double? dailyCalories,
     double? goalCalories,
+    bool? hasBPIssue,
+    bool? hasDiabetes,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -79,6 +89,8 @@ class ProfileModel {
       activityLevel: activityLevel ?? this.activityLevel,
       dailyCalories: dailyCalories ?? this.dailyCalories,
       goalCalories: goalCalories ?? this.goalCalories,
+      hasBPIssue: hasBPIssue ?? this.hasBPIssue,
+      hasDiabetes: hasDiabetes ?? this.hasDiabetes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

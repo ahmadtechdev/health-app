@@ -171,9 +171,36 @@ class _DoctorSignInState extends State<DoctorSignIn> {
                               print("Check Email & password !!!");
                             }
                           } on FirebaseAuthException catch (e) {
+                            String errorMessage = "Authentication failed";
+                            switch (e.code) {
+                              case 'user-not-found':
+                                errorMessage = "No user found with this email";
+                                break;
+                              case 'wrong-password':
+                                errorMessage = "Wrong password provided";
+                                break;
+                              case 'invalid-credential':
+                                errorMessage = "Invalid email or password";
+                                break;
+                              case 'invalid-email':
+                                errorMessage = "The email address is invalid";
+                                break;
+                              case 'user-disabled':
+                                errorMessage = "This user account has been disabled";
+                                break;
+                              case 'too-many-requests':
+                                errorMessage = "Too many failed attempts. Please try again later";
+                                break;
+                              case 'operation-not-allowed':
+                                errorMessage = "Email/password sign-in is not enabled";
+                                break;
+                              default:
+                                errorMessage = e.message ?? "Authentication failed. Please check your email and password";
+                            }
+                            
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text("Check email & password"),
+                                content: Text(errorMessage),
                                 backgroundColor: Colors.red,
                                 behavior: SnackBarBehavior.floating,
                                 shape: RoundedRectangleBorder(
@@ -183,7 +210,19 @@ class _DoctorSignInState extends State<DoctorSignIn> {
                                     bottom: 12, right: 20, left: 20),
                               ),
                             );
-                            print("Error: $e");
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text("An unexpected error occurred. Please try again"),
+                                backgroundColor: Colors.red,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(22),
+                                ),
+                                margin: EdgeInsets.only(
+                                    bottom: 12, right: 20, left: 20),
+                              ),
+                            );
                           }
                         }
                       },

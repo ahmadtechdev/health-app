@@ -1,9 +1,8 @@
 import 'dart:convert';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-
+import '../colors.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -13,8 +12,10 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  TextEditingController _userInput = TextEditingController();
-  static const apiKey = "AIzaSyCgFagW7p8FXQueEXxg2lySg_RGA3I6F_8";
+  final TextEditingController _userInput = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  static const apiKey = "AIzaSyATg46kzkzAYCqBLM9KDEscqopJnuU0k44";
+  
   // Updated model names - prioritize working models
   static const List<Map<String, dynamic>> modelConfigs = [
     {'name': 'gemini-2.5-flash-lite', 'useBeta': false}, // Known to work
@@ -27,53 +28,43 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isRequestInProgress = false;
   String? _workingModel; // Cache the working model
   
+  @override
+  void initState() {
+    super.initState();
+    // Add welcome message
+    _messages.add(Message(
+      isUser: false,
+      message: "Hello! I'm MediGuide, your AI health assistant. 👋\n\nI can provide information about diseases including:\n• Precautions\n• Medicines\n• Cures\n• Exercises\n\nPlease enter the name of a disease to get started.",
+      date: DateTime.now(),
+    ));
+  }
+
+  @override
+  void dispose() {
+    _userInput.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+  
   String _getApiUrl(String modelName, {bool useBeta = false}) {
-    // Try v1beta for models that might not be in v1
     final version = useBeta ? 'v1beta' : 'v1';
     return "https://generativelanguage.googleapis.com/$version/models/$modelName:generateContent";
   }
-  
-  // Function to list available models and their supported methods
-  Future<List<Map<String, dynamic>>> _listAvailableModels() async {
-    final results = <Map<String, dynamic>>[];
-    
-    // Try both v1 and v1beta
-    for (final version in ['v1', 'v1beta']) {
-      try {
-        final response = await http.get(
-          Uri.parse('https://generativelanguage.googleapis.com/$version/models?key=$apiKey'),
-          headers: {'Content-Type': 'application/json'},
-        );
-        
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          final models = data['models'] as List?;
-          if (models != null) {
-            for (final model in models) {
-              final name = model['name'] as String?;
-              if (name != null && name.contains('gemini')) {
-                final supportedMethods = model['supportedGenerationMethods'] as List? ?? [];
-                final modelName = name.replaceAll('models/', '');
-                results.add({
-                  'name': modelName,
-                  'version': version,
-                  'supportsGenerateContent': supportedMethods.contains('generateContent'),
-                });
-              }
-            }
-          }
-        }
-      } catch (e) {
-        debugPrint('Error listing models from $version: $e');
-      }
-    }
-    
-    debugPrint('Available models: $results');
-    return results;
-  }
 
   Future<void> sendMessage() async {
-    final message = _userInput.text;
+    final message = _userInput.text.trim();
     if (message.isEmpty) return;
 
     setState(() {
@@ -81,15 +72,28 @@ class _ChatScreenState extends State<ChatScreen> {
       _userInput.clear();
       _isRequestInProgress = true;
     });
+    _scrollToBottom();
 
-    final prompt = "GPT, upon receiving the name of a human health disease, provide information including precautions, medicines, cures, and exercises. "
-        "The response should be in headings format, consisting of 2 to 10 line per heading without any additional text. "
-        "The disease is $message. If the input is not a recognized disease, respond with 'Unrecognized disease.'";
+    final prompt = "You are a medical assistant. Upon receiving the name of a human health disease, provide comprehensive information including:\n"
+        "1. Precautions\n"
+        "2. Medicines (with brief descriptions)\n"
+        "3. Cures/Treatments\n"
+        "4. Recommended Exercises\n\n"
+        "Format the response with clear headings using # for main headings and - for bullet points. "
+        "Each section should have 2 to 10 lines of information. "
+        "The disease is: $message. "
+        "If the input is not a recognized disease, respond with 'Unrecognized disease. Please enter a valid disease name.'";
 
-    // Adding a temporary "GPT is writing" message
+    // Adding a temporary "MediGuide is writing" message
     setState(() {
-      _messages.add(Message(isUser: false, message: "MediGuide  is writing...", date: DateTime.now(), isTemporary: true));
+      _messages.add(Message(
+        isUser: false,
+        message: "MediGuide is analyzing...",
+        date: DateTime.now(),
+        isTemporary: true,
+      ));
     });
+    _scrollToBottom();
 
     // Use cached working model if available
     Map<String, dynamic>? workingConfig;
@@ -114,9 +118,7 @@ class _ChatScreenState extends State<ChatScreen> {
         
         final response = await http.post(
           Uri.parse('$url?key=$apiKey'),
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'contents': [
               {
@@ -138,7 +140,6 @@ class _ChatScreenState extends State<ChatScreen> {
         debugPrint('Response status for $modelName: ${response.statusCode}');
         
         if (response.statusCode == 200) {
-          // Cache the working model for future requests
           _workingModel = modelName;
           
           try {
@@ -147,7 +148,6 @@ class _ChatScreenState extends State<ChatScreen> {
             
             String responseText = "Sorry, I couldn't generate a response.";
             
-            // Try different response structures
             if (responseData['candidates'] != null) {
               final candidates = responseData['candidates'] as List?;
               if (candidates != null && candidates.isNotEmpty) {
@@ -163,49 +163,42 @@ class _ChatScreenState extends State<ChatScreen> {
                 }
               }
             } else if (responseData['text'] != null) {
-              // Alternative response format
               responseText = responseData['text'] as String;
             } else {
               debugPrint('Unexpected response format: ${response.body}');
             }
 
             setState(() {
-              // Remove the temporary message
               _messages.removeWhere((msg) => msg.isTemporary);
-
               _messages.add(Message(isUser: false, message: responseText, date: DateTime.now()));
               _isRequestInProgress = false;
             });
-            return; // Success, exit the function
+            _scrollToBottom();
+            return;
           } catch (e) {
             debugPrint('Error parsing response: $e');
             debugPrint('Response body: ${response.body}');
             lastError = "Failed to parse response: $e";
-            continue; // Try next model
+            continue;
           }
         } else {
-          // Parse error response
           debugPrint('Response body: ${response.body}');
           try {
             final errorData = jsonDecode(response.body);
             if (errorData['error'] != null) {
               final error = errorData['error'];
               final message = error['message'] ?? error.toString();
-              final code = error['code'];
               lastError = message;
               debugPrint('API Error for $modelName: $message');
               
-              // Handle quota errors (429) - wait and retry or skip
               if (response.statusCode == 429) {
                 debugPrint('Quota exceeded for $modelName, trying next model...');
-                continue; // Try next model
+                continue;
               }
               
-              // If 404, try next model
               if (response.statusCode == 404) {
                 continue;
               } else if (response.statusCode == 400 || response.statusCode == 403 || response.statusCode == 401) {
-                // Bad request, auth error, or permission error - show error and stop
                 break;
               }
             }
@@ -213,16 +206,16 @@ class _ChatScreenState extends State<ChatScreen> {
             debugPrint('Could not parse error response: $e');
             lastError = response.body;
             if (response.statusCode == 404 || response.statusCode == 429) {
-              continue; // Try next model
+              continue;
             } else {
-              break; // Stop on other errors
+              break;
             }
           }
         }
       } catch (e) {
         debugPrint('Exception caught for $modelName: $e');
         lastError = e.toString();
-        continue; // Try next model
+        continue;
       }
     }
     
@@ -253,69 +246,214 @@ class _ChatScreenState extends State<ChatScreen> {
       ));
       _isRequestInProgress = false;
     });
+    _scrollToBottom();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            colorFilter: ColorFilter.mode(Colors.black.withOpacity(0.8), BlendMode.dstATop),
-            image: AssetImage('assets/images/botimage.jpg'),
-            fit: BoxFit.cover,
+      backgroundColor: TColors.background,
+      appBar: AppBar(
+        title: const Text(
+          'MediGuide Assistant',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: TColors.textPrimary,
           ),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            Expanded(
-              child: ListView.builder(
-                itemCount: _messages.length,
-                itemBuilder: (context, index) {
-                  final message = _messages[index];
-                  return Messages(
-                    isUser: message.isUser,
-                    message: message.message,
-                    date: DateFormat('HH:mm').format(message.date),
-                  );
-                },
+        backgroundColor: TColors.primary,
+        foregroundColor: TColors.white,
+        elevation: 0,
+        centerTitle: true,
+      ),
+      body: Column(
+        children: [
+          // Header Banner
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [TColors.primary, TColors.accent],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: TColors.accent.withOpacity(0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: TColors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.medical_services,
+                        color: TColors.white,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'AI Health Assistant',
+                            style: TextStyle(
+                              color: TColors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Get instant medical information',
+                            style: TextStyle(
+                              color: TColors.white,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          
+          // Messages List
+          Expanded(
+            child: _messages.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.chat_bubble_outline,
+                          size: 64,
+                          color: TColors.accent.withOpacity(0.5),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Start a conversation',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: TColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _messages.length,
+                    itemBuilder: (context, index) {
+                      final message = _messages[index];
+                      return ChatMessage(
+                        isUser: message.isUser,
+                        message: message.message,
+                        date: DateFormat('HH:mm').format(message.date),
+                        isTemporary: message.isTemporary,
+                      );
+                    },
+                  ),
+          ),
+          
+          // Input Area
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: TColors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: TColors.greyLight.withOpacity(0.3),
+                  blurRadius: 10,
+                  offset: const Offset(0, -2),
+                ),
+              ],
+            ),
+            child: SafeArea(
               child: Row(
                 children: [
                   Expanded(
-                    flex: 15,
-                    child: TextFormField(
-                      style: TextStyle(color: Colors.white),
+                    child: TextField(
                       controller: _userInput,
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        label: Text('Enter disease name', style: TextStyle(color: Colors.white)),
+                      style: const TextStyle(
+                        color: TColors.textPrimary,
+                        fontSize: 16,
                       ),
+                      decoration: InputDecoration(
+                        hintText: 'Enter disease name...',
+                        hintStyle: TextStyle(color: TColors.placeholder),
+                        filled: true,
+                        fillColor: TColors.background,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(25),
+                          borderSide: BorderSide(color: TColors.background3),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(25),
+                          borderSide: BorderSide(color: TColors.background3),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(25),
+                          borderSide: const BorderSide(color: TColors.primary, width: 2),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      ),
+                      onSubmitted: (_) {
+                        if (!_isRequestInProgress) sendMessage();
+                      },
                     ),
                   ),
-                  Spacer(),
-                  IconButton(
-                    padding: EdgeInsets.all(12),
-                    iconSize: 30,
-                    style: ButtonStyle(
-                      backgroundColor: MaterialStateProperty.all(Colors.black),
-                      foregroundColor: MaterialStateProperty.all(Colors.white),
-                      shape: MaterialStateProperty.all(CircleBorder()),
+                  const SizedBox(width: 12),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: TColors.primary,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: TColors.primary.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
-                    onPressed: _isRequestInProgress ? null : sendMessage,
-                    icon: Icon(Icons.send),
+                    child: IconButton(
+                      padding: const EdgeInsets.all(12),
+                      iconSize: 24,
+                      color: TColors.white,
+                      onPressed: _isRequestInProgress ? null : sendMessage,
+                      icon: _isRequestInProgress
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(TColors.white),
+                              ),
+                            )
+                          : const Icon(Icons.send),
+                    ),
                   ),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -327,52 +465,230 @@ class Message {
   final DateTime date;
   final bool isTemporary;
 
-  Message({required this.isUser, required this.message, required this.date, this.isTemporary = false});
+  Message({
+    required this.isUser,
+    required this.message,
+    required this.date,
+    this.isTemporary = false,
+  });
 }
 
-class Messages extends StatelessWidget {
+class ChatMessage extends StatelessWidget {
   final bool isUser;
   final String message;
   final String date;
+  final bool isTemporary;
 
-  const Messages({
+  const ChatMessage({
     super.key,
     required this.isUser,
     required this.message,
     required this.date,
+    this.isTemporary = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(15),
-      margin: EdgeInsets.symmetric(vertical: 15).copyWith(
-        left: isUser ? 100 : 10,
-        right: isUser ? 10 : 100,
-      ),
-      decoration: BoxDecoration(
-        color: isUser ? Colors.blueAccent : Colors.grey.shade400,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(10),
-          bottomLeft: isUser ? Radius.circular(10) : Radius.zero,
-          topRight: Radius.circular(10),
-          bottomRight: isUser ? Radius.zero : Radius.circular(10),
-        ),
-      ),
-      child: Column(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            message,
-            style: TextStyle(fontSize: 16, color: isUser ? Colors.white : Colors.black),
+          if (!isUser) ...[
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [TColors.primary, TColors.accent],
+                ),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: TColors.primary.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.medical_services,
+                color: TColors.white,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isUser ? TColors.primary : TColors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(20),
+                  topRight: const Radius.circular(20),
+                  bottomLeft: Radius.circular(isUser ? 20 : 4),
+                  bottomRight: Radius.circular(isUser ? 4 : 20),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: (isUser ? TColors.primary : TColors.greyLight).withOpacity(0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (isTemporary)
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              isUser ? TColors.white : TColors.primary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          message,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontStyle: FontStyle.italic,
+                            color: isUser
+                                ? TColors.white.withOpacity(0.8)
+                                : TColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    _buildFormattedMessage(),
+                  const SizedBox(height: 8),
+                  Text(
+                    date,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isUser
+                          ? TColors.white.withOpacity(0.7)
+                          : TColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-          Text(
-            date,
-            style: TextStyle(fontSize: 10, color: isUser ? Colors.white : Colors.black),
-          ),
+          if (isUser) ...[
+            const SizedBox(width: 12),
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: TColors.accent,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: TColors.accent.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.person,
+                color: TColors.white,
+                size: 20,
+              ),
+            ),
+          ],
         ],
       ),
+    );
+  }
+
+  Widget _buildFormattedMessage() {
+    final lines = message.split('\n');
+    final widgets = <Widget>[];
+
+    for (final line in lines) {
+      if (line.trim().isEmpty) {
+        widgets.add(const SizedBox(height: 8));
+        continue;
+      }
+
+      // Check for headings (lines starting with # or numbered headings)
+      if (line.trim().startsWith('#') || 
+          RegExp(r'^\d+\.\s+[A-Z]').hasMatch(line.trim())) {
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 4),
+            child: Text(
+              line.trim().replaceAll('#', '').trim(),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: isUser ? TColors.white : TColors.textPrimary,
+              ),
+            ),
+          ),
+        );
+      } else if (line.trim().startsWith('-') || line.trim().startsWith('•')) {
+        // Bullet points
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '• ',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: isUser ? TColors.white : TColors.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    line.trim().replaceAll(RegExp(r'^[-•]\s*'), ''),
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: isUser ? TColors.white : TColors.textSecondary,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      } else {
+        // Regular text
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Text(
+              line.trim(),
+              style: TextStyle(
+                fontSize: 15,
+                color: isUser ? TColors.white : TColors.textSecondary,
+                height: 1.5,
+              ),
+            ),
+          ),
+        );
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: widgets,
     );
   }
 }
