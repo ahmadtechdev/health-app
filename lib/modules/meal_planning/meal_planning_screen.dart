@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 
 import '../../colors.dart';
+import '../../config/api_config.dart';
 import '../profile/profile_controller.dart';
 
 /// Meal Planning Chat Screen
@@ -21,7 +22,6 @@ class MealPlanningScreen extends StatefulWidget {
 
 class _MealPlanningScreenState extends State<MealPlanningScreen> {
   TextEditingController _userInput = TextEditingController();
-  static const apiKey = "AIzaSyATg46kzkzAYCqBLM9KDEscqopJnuU0k44";
   
   // Model configurations
   static const List<Map<String, dynamic>> modelConfigs = [
@@ -622,7 +622,7 @@ Format the response in a clear, organized structure with headings for each day. 
         debugPrint('Trying model: $modelName (${useBeta ? "v1beta" : "v1"})');
         
         final response = await http.post(
-          Uri.parse('$url?key=$apiKey'),
+          Uri.parse('$url?key=${ApiConfig.geminiApiKey}'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'contents': [

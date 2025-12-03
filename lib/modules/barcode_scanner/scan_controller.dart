@@ -23,12 +23,14 @@ class ScanController extends GetxController {
   final _nutritionData = Rxn<NutritionModel>();
   final _errorMessage = ''.obs;
   final _scannedBarcode = ''.obs;
+  final _productName = ''.obs; // For manual entry when barcode not found
 
   // Getters
   ScanState get scanState => _scanState.value;
   NutritionModel? get nutritionData => _nutritionData.value;
   String get errorMessage => _errorMessage.value;
   String get scannedBarcode => _scannedBarcode.value;
+  String get productName => _productName.value;
   
   bool get isIdle => _scanState.value == ScanState.idle;
   bool get isScanning => _scanState.value == ScanState.scanning;
@@ -63,15 +65,21 @@ class ScanController extends GetxController {
       _scanState.value = ScanState.loading;
       _errorMessage.value = '';
 
-      // Fetch nutrition data
-      final nutrition = await _nutritionService.fetchNutrition(barcode);
+      // Fetch nutrition data using Gemini AI
+      final nutrition = await _nutritionService.fetchNutrition(
+        barcode, 
+        productName: _productName.value.isNotEmpty ? _productName.value : null,
+      );
 
       if (nutrition != null) {
         _nutritionData.value = nutrition;
         _scanState.value = ScanState.result;
       } else {
-        _setError('Product not found');
-        _showSnackbar('Product not found', 'The barcode was not found in our database.');
+        _setError('Unable to get nutrition data');
+        _showSnackbar(
+          'Unable to get data', 
+          'Could not fetch nutrition information. Try entering the product name manually.',
+        );
       }
     } catch (e) {
       final errorMsg = _getErrorMessage(e);
@@ -86,12 +94,42 @@ class ScanController extends GetxController {
     _nutritionData.value = null;
     _errorMessage.value = '';
     _scannedBarcode.value = '';
+    _productName.value = '';
   }
 
   /// Rescan - go back to scanning state
   void rescan() {
     reset();
     startScanning();
+  }
+
+  /// Try fetching nutrition with manual product name
+  Future<void> fetchWithProductName(String productName) async {
+    if (productName.isEmpty) return;
+    
+    try {
+      _productName.value = productName;
+      _scanState.value = ScanState.loading;
+      _errorMessage.value = '';
+      
+      // Try Gemini directly with product name
+      final nutrition = await _nutritionService.fetchNutrition(
+        _scannedBarcode.value.isNotEmpty ? _scannedBarcode.value : 'unknown',
+        productName: productName,
+      );
+      
+      if (nutrition != null) {
+        _nutritionData.value = nutrition;
+        _scanState.value = ScanState.result;
+      } else {
+        _setError('Unable to get nutrition data');
+        _showSnackbar('Error', 'Could not fetch nutrition data for this product.');
+      }
+    } catch (e) {
+      final errorMsg = _getErrorMessage(e);
+      _setError(errorMsg);
+      _showSnackbar('Error', errorMsg);
+    }
   }
 
   /// Set error state with message

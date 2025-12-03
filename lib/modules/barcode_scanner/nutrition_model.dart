@@ -1,5 +1,10 @@
 /// Nutrition Model for OpenFoodFacts API response
 /// Contains all nutrition information for a scanned product
+/// 
+/// Energy Conversion:
+/// - Open Food Facts API provides energy in kJ (kilojoules) by default
+/// - Conversion formula: Kcal = kJ * 0.23900573614
+/// - The API also provides energy-kcal_100g field directly in kcal
 class NutritionModel {
   final String productName;
   final String? brand;
@@ -11,6 +16,7 @@ class NutritionModel {
   final double? protein;
   final double? sodium;
   final Map<String, String> nutrientLevels; // e.g., {"fat": "high", "sugar": "medium"}
+  final bool isFromGemini; // Indicates if data came from Gemini API
 
   NutritionModel({
     required this.productName,
@@ -23,6 +29,7 @@ class NutritionModel {
     this.protein,
     this.sodium,
     this.nutrientLevels = const {},
+    this.isFromGemini = false,
   });
 
   /// Factory constructor to create NutritionModel from JSON
@@ -48,9 +55,74 @@ class NutritionModel {
     // Extract nutrition facts (per 100g)
     final nutriments = product['nutriments'] as Map<String, dynamic>? ?? {};
     
-    // Calories (energy-kcal_100g or energy-kcal)
-    final calories = _parseDouble(nutriments['energy-kcal_100g']) ?? 
-                    _parseDouble(nutriments['energy-kcal']);
+    // Calories extraction with proper fallback and conversion
+    // Priority order:
+    // 1. energy-kcal_100g (preferred - direct kcal per 100g)
+    // 2. energy-kcal (alternative kcal field)
+    // 3. energy-kj_100g converted to kcal (kJ * 0.23900573614)
+    // 4. energy-kj converted to kcal
+    // 5. energy_100g (auto-detect if kJ or kcal)
+    // 6. energy (auto-detect if kJ or kcal)
+    double? calories;
+    
+    // Conversion constant: kJ to kcal
+    const double kJToKcal = 0.23900573614;
+    
+    // First priority: energy-kcal_100g (direct kcal per 100g)
+    calories = _parseDouble(nutriments['energy-kcal_100g']);
+    
+    // Second priority: energy-kcal (alternative kcal field)
+    if (calories == null) {
+      calories = _parseDouble(nutriments['energy-kcal']);
+    }
+    
+    // Third priority: Convert from kJ (energy-kj_100g)
+    if (calories == null) {
+      final energyKj = _parseDouble(nutriments['energy-kj_100g']);
+      if (energyKj != null && energyKj > 0) {
+        calories = energyKj * kJToKcal;
+      }
+    }
+    
+    // Fourth priority: Convert from kJ (energy-kj)
+    if (calories == null) {
+      final energyKj = _parseDouble(nutriments['energy-kj']);
+      if (energyKj != null && energyKj > 0) {
+        calories = energyKj * kJToKcal;
+      }
+    }
+    
+    // Fifth priority: Try energy_100g (auto-detect unit)
+    if (calories == null) {
+      final energy = _parseDouble(nutriments['energy_100g']);
+      if (energy != null && energy > 0) {
+        // Typical food energy: kJ ranges 100-5000, kcal ranges 20-1200
+        // If value > 1000, it's likely kJ, otherwise assume kcal
+        if (energy > 1000) {
+          calories = energy * kJToKcal;
+        } else {
+          calories = energy;
+        }
+      }
+    }
+    
+    // Sixth priority: Try energy (without _100g suffix)
+    if (calories == null) {
+      final energy = _parseDouble(nutriments['energy']);
+      if (energy != null && energy > 0) {
+        // Auto-detect: if value > 1000, it's likely kJ
+        if (energy > 1000) {
+          calories = energy * kJToKcal;
+        } else {
+          calories = energy;
+        }
+      }
+    }
+    
+    // Round to 1 decimal place for cleaner display
+    if (calories != null) {
+      calories = double.parse(calories!.toStringAsFixed(1));
+    }
 
     // Fat (fat_100g)
     final fat = _parseDouble(nutriments['fat_100g']);
@@ -102,6 +174,7 @@ class NutritionModel {
       protein: protein,
       sodium: sodium,
       nutrientLevels: nutrientLevels,
+      isFromGemini: true, // All data now comes from Gemini AI
     );
   }
 
@@ -129,6 +202,7 @@ class NutritionModel {
       'protein': protein,
       'sodium': sodium,
       'nutrientLevels': nutrientLevels,
+      'isFromGemini': isFromGemini,
     };
   }
 }

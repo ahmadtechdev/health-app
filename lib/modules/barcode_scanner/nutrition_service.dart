@@ -1,62 +1,39 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:flutter/material.dart';
 import 'nutrition_model.dart';
+import 'gemini_nutrition_service.dart';
 
-/// Service class for fetching nutrition data from OpenFoodFacts API
+/// Service class for fetching nutrition data using Gemini AI
+/// Uses AI to extract nutrition information from product name/barcode
 class NutritionService {
-  static const String _baseUrl = 'https://world.openfoodfacts.org/api/v0/product';
+  final GeminiNutritionService _geminiService = GeminiNutritionService();
 
-  /// Fetches nutrition data for a given barcode
-  /// Returns null if product not found or on error
-  Future<NutritionModel?> fetchNutrition(String barcode) async {
+  /// Fetches nutrition data using Gemini AI
+  /// Can work with barcode, product name, or both
+  /// Returns null if unable to fetch data
+  Future<NutritionModel?> fetchNutrition(String identifier, {String? productName}) async {
     try {
-      // Validate barcode
-      if (barcode.isEmpty || barcode.trim().isEmpty) {
-        throw Exception('Invalid barcode: barcode is empty');
+      // Validate input
+      if ((identifier.isEmpty || identifier.trim().isEmpty) && 
+          (productName == null || productName.trim().isEmpty)) {
+        throw Exception('Please provide either a barcode or product name');
       }
 
-      // Clean barcode (remove any whitespace)
-      final cleanBarcode = barcode.trim();
-
-      // Construct API URL
-      final url = Uri.parse('$_baseUrl/$cleanBarcode.json');
-
-      // Make GET request
-      final response = await http.get(url).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          throw Exception('Request timeout: No internet connection');
-        },
+      debugPrint('Fetching nutrition data from Gemini API...');
+      
+      // Use Gemini to fetch nutrition data
+      final nutrition = await _geminiService.fetchNutritionFromGemini(
+        identifier.trim(),
+        productName: productName?.trim(),
       );
-
-      // Check response status
-      if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body) as Map<String, dynamic>;
-        
-        // Check if product exists
-        final status = jsonData['status'] as int?;
-        if (status == 0) {
-          // Product not found
-          return null;
-        }
-
-        // Parse and return nutrition model
-        return NutritionModel.fromJson(jsonData);
-      } else if (response.statusCode == 404) {
-        // Product not found
-        return null;
-      } else {
-        // Other HTTP errors
-        throw Exception('HTTP ${response.statusCode}: ${response.reasonPhrase}');
+      
+      if (nutrition != null) {
+        debugPrint('Successfully fetched nutrition data from Gemini API');
+        return nutrition;
       }
-    } on http.ClientException catch (e) {
-      // Network errors (no internet, DNS failure, etc.)
-      throw Exception('Network error: ${e.message}');
-    } on FormatException catch (e) {
-      // JSON parsing errors
-      throw Exception('Invalid response format: ${e.message}');
+      
+      return null;
     } catch (e) {
-      // Any other errors
+      debugPrint('Error fetching nutrition data: $e');
       throw Exception('Error fetching nutrition data: ${e.toString()}');
     }
   }

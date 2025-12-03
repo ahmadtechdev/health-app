@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import '../colors.dart';
+import '../config/api_config.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -14,7 +15,6 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _userInput = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  static const apiKey = "AIzaSyATg46kzkzAYCqBLM9KDEscqopJnuU0k44";
   
   // Updated model names - prioritize working models
   static const List<Map<String, dynamic>> modelConfigs = [
@@ -117,7 +117,7 @@ class _ChatScreenState extends State<ChatScreen> {
         debugPrint('Trying model: $modelName (${useBeta ? "v1beta" : "v1"})');
         
         final response = await http.post(
-          Uri.parse('$url?key=$apiKey'),
+          Uri.parse('$url?key=${ApiConfig.geminiApiKey}'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'contents': [

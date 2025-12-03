@@ -159,14 +159,14 @@ class _ScanPageState extends State<ScanPage> {
             size: 24,
           ),
           const SizedBox(width: 12),
-          const Text(
-            'Position barcode within the frame',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: TColors.textPrimary,
-            ),
-          ),
+              const Text(
+                'Position barcode or enter product name',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: TColors.textPrimary,
+                ),
+              ),
         ],
       ),
     );
@@ -224,7 +224,7 @@ class _ScanPageState extends State<ScanPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Fetching nutrition data...',
+              'Analyzing product with AI...',
               style: TextStyle(
                 fontSize: 16,
                 color: TColors.textSecondary,
@@ -282,6 +282,37 @@ class _ScanPageState extends State<ScanPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // AI-powered data indicator
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [TColors.primary.withOpacity(0.1), TColors.accent.withOpacity(0.1)],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: TColors.primary, width: 1),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        MdiIcons.robot,
+                        size: 16,
+                        color: TColors.primary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'AI-Powered Nutrition Data',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: TColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 // Product Name
                 Text(
                   nutrition.productName,
@@ -302,11 +333,14 @@ class _ScanPageState extends State<ScanPage> {
                   ),
                 ],
                 const SizedBox(height: 24),
-                // Calories
+                // Health Impact Analysis
+                _buildHealthImpactSection(nutrition),
+                const SizedBox(height: 24),
+                // Calories (per 100g)
                 if (nutrition.calories != null)
                   _buildNutritionRow(
                     icon: MdiIcons.fire,
-                    label: 'Calories',
+                    label: 'Calories (per 100g)',
                     value: '${nutrition.calories!.toStringAsFixed(0)} kcal',
                     color: Colors.orange,
                   ),
@@ -444,6 +478,326 @@ class _ScanPageState extends State<ScanPage> {
         ],
       ],
     );
+  }
+
+  /// Build health impact analysis section
+  Widget _buildHealthImpactSection(NutritionModel nutrition) {
+    final healthAnalysis = _analyzeHealthImpact(nutrition);
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              MdiIcons.heartPulse,
+              color: healthAnalysis['color'] as Color,
+              size: 24,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Health Impact',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: TColors.textPrimary,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // Main health status card
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: (healthAnalysis['color'] as Color).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: healthAnalysis['color'] as Color,
+              width: 2,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                healthAnalysis['icon'] as IconData,
+                color: healthAnalysis['color'] as Color,
+                size: 32,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      healthAnalysis['status'] as String,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: healthAnalysis['color'] as Color,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      healthAnalysis['message'] as String,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: TColors.textSecondary,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Detailed warnings/recommendations
+        ...(healthAnalysis['warnings'] as List<Map<String, dynamic>>).map((warning) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: (warning['color'] as Color).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: (warning['color'] as Color).withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    warning['icon'] as IconData,
+                    color: warning['color'] as Color,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      warning['text'] as String,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: TColors.textSecondary,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      ],
+    );
+  }
+
+  /// Analyze health impact of the product
+  Map<String, dynamic> _analyzeHealthImpact(NutritionModel nutrition) {
+    final warnings = <Map<String, dynamic>>[];
+    int healthScore = 0; // Positive = good, Negative = bad
+    
+    // Analyze calories
+    if (nutrition.calories != null) {
+      if (nutrition.calories! > 500) {
+        healthScore -= 2;
+        warnings.add({
+          'text': 'Very high in calories (${nutrition.calories!.toStringAsFixed(0)} kcal/100g). Consume in moderation.',
+          'color': TColors.error,
+          'icon': MdiIcons.alertCircle,
+        });
+      } else if (nutrition.calories! > 400) {
+        healthScore -= 1;
+        warnings.add({
+          'text': 'High in calories (${nutrition.calories!.toStringAsFixed(0)} kcal/100g). Watch your portion size.',
+          'color': TColors.warning,
+          'icon': MdiIcons.alert,
+        });
+      } else if (nutrition.calories! < 100) {
+        healthScore += 1;
+        warnings.add({
+          'text': 'Low in calories (${nutrition.calories!.toStringAsFixed(0)} kcal/100g). Good for weight management.',
+          'color': TColors.success,
+          'icon': MdiIcons.checkCircle,
+        });
+      }
+    }
+    
+    // Analyze sugar
+    if (nutrition.sugar != null) {
+      if (nutrition.sugar! > 20) {
+        healthScore -= 3;
+        warnings.add({
+          'text': 'Very high in sugar (${nutrition.sugar!.toStringAsFixed(1)}g/100g). May cause blood sugar spikes.',
+          'color': TColors.error,
+          'icon': MdiIcons.alertCircle,
+        });
+      } else if (nutrition.sugar! > 15) {
+        healthScore -= 2;
+        warnings.add({
+          'text': 'High in sugar (${nutrition.sugar!.toStringAsFixed(1)}g/100g). Limit consumption.',
+          'color': TColors.warning,
+          'icon': MdiIcons.alert,
+        });
+      } else if (nutrition.sugar! < 5) {
+        healthScore += 1;
+        warnings.add({
+          'text': 'Low in sugar (${nutrition.sugar!.toStringAsFixed(1)}g/100g). Better for health.',
+          'color': TColors.success,
+          'icon': MdiIcons.checkCircle,
+        });
+      }
+    }
+    
+    // Analyze fat
+    if (nutrition.fat != null) {
+      if (nutrition.fat! > 30) {
+        healthScore -= 2;
+        warnings.add({
+          'text': 'Very high in fat (${nutrition.fat!.toStringAsFixed(1)}g/100g). May contribute to heart issues.',
+          'color': TColors.error,
+          'icon': MdiIcons.alertCircle,
+        });
+      } else if (nutrition.fat! > 20) {
+        healthScore -= 1;
+        warnings.add({
+          'text': 'High in fat (${nutrition.fat!.toStringAsFixed(1)}g/100g). Consume moderately.',
+          'color': TColors.warning,
+          'icon': MdiIcons.alert,
+        });
+      } else if (nutrition.fat! < 5) {
+        healthScore += 1;
+        warnings.add({
+          'text': 'Low in fat (${nutrition.fat!.toStringAsFixed(1)}g/100g). Healthier option.',
+          'color': TColors.success,
+          'icon': MdiIcons.checkCircle,
+        });
+      }
+    }
+    
+    // Analyze sodium
+    if (nutrition.sodium != null) {
+      // Sodium is typically in grams, but we need to check if it's in mg
+      // Open Food Facts provides sodium_100g in grams
+      final sodiumGrams = nutrition.sodium!;
+      final sodiumMg = sodiumGrams * 1000; // Convert to mg for comparison
+      
+      if (sodiumMg > 2000) {
+        healthScore -= 3;
+        warnings.add({
+          'text': 'Very high in sodium (${sodiumMg.toStringAsFixed(0)}mg/100g). May increase blood pressure risk.',
+          'color': TColors.error,
+          'icon': MdiIcons.alertCircle,
+        });
+      } else if (sodiumMg > 1000) {
+        healthScore -= 2;
+        warnings.add({
+          'text': 'High in sodium (${sodiumMg.toStringAsFixed(0)}mg/100g). Not ideal for heart health.',
+          'color': TColors.warning,
+          'icon': MdiIcons.alert,
+        });
+      } else if (sodiumMg < 400) {
+        healthScore += 1;
+        warnings.add({
+          'text': 'Low in sodium (${sodiumMg.toStringAsFixed(0)}mg/100g). Better for blood pressure.',
+          'color': TColors.success,
+          'icon': MdiIcons.checkCircle,
+        });
+      }
+    }
+    
+    // Analyze protein
+    if (nutrition.protein != null) {
+      if (nutrition.protein! > 15) {
+        healthScore += 2;
+        warnings.add({
+          'text': 'High in protein (${nutrition.protein!.toStringAsFixed(1)}g/100g). Great for muscle health.',
+          'color': TColors.success,
+          'icon': MdiIcons.checkCircle,
+        });
+      } else if (nutrition.protein! > 10) {
+        healthScore += 1;
+        warnings.add({
+          'text': 'Good protein content (${nutrition.protein!.toStringAsFixed(1)}g/100g). Supports body functions.',
+          'color': TColors.success,
+          'icon': MdiIcons.checkCircle,
+        });
+      }
+    }
+    
+    // Check nutrient levels from API
+    nutrition.nutrientLevels.forEach((key, value) {
+      final level = value.toLowerCase();
+      if (level == 'high') {
+        if (key.toLowerCase().contains('fat') || 
+            key.toLowerCase().contains('saturated') ||
+            key.toLowerCase().contains('sugar') ||
+            key.toLowerCase().contains('salt') ||
+            key.toLowerCase().contains('sodium')) {
+          healthScore -= 2;
+          warnings.add({
+            'text': 'High ${key} content detected. May impact health negatively.',
+            'color': TColors.error,
+            'icon': MdiIcons.alertCircle,
+          });
+        }
+      } else if (level == 'medium') {
+        if (key.toLowerCase().contains('fat') || 
+            key.toLowerCase().contains('sugar') ||
+            key.toLowerCase().contains('salt')) {
+          healthScore -= 1;
+          warnings.add({
+            'text': 'Moderate ${key} content. Consume in moderation.',
+            'color': TColors.warning,
+            'icon': MdiIcons.alert,
+          });
+        }
+      }
+    });
+    
+    // Determine overall health status
+    String status;
+    Color color;
+    IconData icon;
+    String message;
+    
+    if (healthScore <= -3) {
+      // Very unhealthy
+      status = '⚠️ Not Recommended';
+      color = TColors.error;
+      icon = MdiIcons.alertCircle;
+      message = 'This product has multiple health concerns. Consider healthier alternatives or consume very rarely.';
+    } else if (healthScore <= -1) {
+      // Unhealthy
+      status = '⚠️ Use Caution';
+      color = TColors.warning;
+      icon = MdiIcons.alert;
+      message = 'This product has some health concerns. Consume in moderation and balance with healthier foods.';
+    } else if (healthScore >= 2) {
+      // Healthy
+      status = '✅ Good Choice';
+      color = TColors.success;
+      icon = MdiIcons.checkCircle;
+      message = 'This product has good nutritional value. Fits well in a balanced diet.';
+    } else {
+      // Neutral
+      status = '⚖️ Moderate';
+      color = TColors.warning;
+      icon = MdiIcons.information;
+      message = 'This product is moderate in nutritional value. Can be part of a balanced diet in appropriate portions.';
+    }
+    
+    return {
+      'status': status,
+      'color': color,
+      'icon': icon,
+      'message': message,
+      'warnings': warnings,
+      'score': healthScore,
+    };
   }
 
   /// Build nutrient levels section
@@ -737,10 +1091,41 @@ class _ScanPageState extends State<ScanPage> {
 
   /// Build error view
   Widget _buildErrorView(ScanController controller) {
+    return _ErrorViewWidget(controller: controller);
+  }
+}
+
+/// Error view widget with manual product name input
+class _ErrorViewWidget extends StatefulWidget {
+  final ScanController controller;
+  
+  const _ErrorViewWidget({required this.controller});
+  
+  @override
+  State<_ErrorViewWidget> createState() => _ErrorViewWidgetState();
+}
+
+class _ErrorViewWidgetState extends State<_ErrorViewWidget> {
+  late final TextEditingController _productNameController;
+  
+  @override
+  void initState() {
+    super.initState();
+    _productNameController = TextEditingController();
+  }
+  
+  @override
+  void dispose() {
+    _productNameController.dispose();
+    super.dispose();
+  }
+  
+  @override
+  Widget build(BuildContext context) {
     return Container(
       color: TColors.background,
       child: Center(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -752,7 +1137,7 @@ class _ScanPageState extends State<ScanPage> {
               ),
               const SizedBox(height: 24),
               Text(
-                controller.errorMessage,
+                widget.controller.errorMessage,
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -760,16 +1145,104 @@ class _ScanPageState extends State<ScanPage> {
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 40),
-              ElevatedButton(
-                onPressed: controller.rescan,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: TColors.primary,
-                  foregroundColor: TColors.white,
+              const SizedBox(height: 16),
+                const Text(
+                  'Enter the product name to get AI-powered nutrition information.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: TColors.textSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              const SizedBox(height: 32),
+              // Manual product name input
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: TColors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: TColors.greyLight.withOpacity(0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    TextField(
+                      controller: _productNameController,
+                      decoration: InputDecoration(
+                        labelText: 'Product Name',
+                        hintText: 'e.g., Coca Cola 500ml',
+                        prefixIcon: const Icon(Icons.shopping_bag, color: TColors.primary),
+                        filled: true,
+                        fillColor: TColors.background,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: TColors.background3),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: TColors.background3),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: TColors.primary, width: 2),
+                        ),
+                      ),
+                      onSubmitted: (value) {
+                        if (value.isNotEmpty) {
+                          widget.controller.fetchWithProductName(value);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () {
+                        if (_productNameController.text.isNotEmpty) {
+                          widget.controller.fetchWithProductName(_productNameController.text);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: TColors.primary,
+                        foregroundColor: TColors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 14,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.search, color: TColors.white),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Get Nutrition Info',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              OutlinedButton(
+                onPressed: widget.controller.rescan,
+                style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 32,
                     vertical: 14,
                   ),
+                  side: BorderSide(color: TColors.primary, width: 2),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -777,13 +1250,14 @@ class _ScanPageState extends State<ScanPage> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(MdiIcons.barcodeScan, color: TColors.white),
+                    Icon(MdiIcons.barcodeScan, color: TColors.primary),
                     const SizedBox(width: 8),
                     const Text(
-                      'Try Again',
+                      'Scan Again',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
+                        color: TColors.primary,
                       ),
                     ),
                   ],
