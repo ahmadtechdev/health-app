@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import '../../colors.dart';
@@ -24,6 +25,13 @@ class ScanController extends GetxController {
   final _errorMessage = ''.obs;
   final _scannedBarcode = ''.obs;
   final _productName = ''.obs; // For manual entry when barcode not found
+  
+  // Barcode hold timer
+  String? _currentBarcode;
+  DateTime? _barcodeDetectedTime;
+  Timer? _holdTimer;
+  final _holdProgress = 0.0.obs; // 0.0 to 1.0 for 2 seconds
+  final _isHolding = false.obs;
 
   // Getters
   ScanState get scanState => _scanState.value;
@@ -31,6 +39,8 @@ class ScanController extends GetxController {
   String get errorMessage => _errorMessage.value;
   String get scannedBarcode => _scannedBarcode.value;
   String get productName => _productName.value;
+  double get holdProgress => _holdProgress.value;
+  bool get isHolding => _isHolding.value;
   
   bool get isIdle => _scanState.value == ScanState.idle;
   bool get isScanning => _scanState.value == ScanState.scanning;
@@ -38,25 +48,119 @@ class ScanController extends GetxController {
   bool get hasResult => _scanState.value == ScanState.result;
   bool get hasError => _scanState.value == ScanState.error;
 
+  @override
+  void onClose() {
+    _holdTimer?.cancel();
+    super.onClose();
+  }
+
   /// Start scanning - reset state and prepare for new scan
   void startScanning() {
     _scanState.value = ScanState.scanning;
     _errorMessage.value = '';
     _nutritionData.value = null;
     _scannedBarcode.value = '';
+    _currentBarcode = null;
+    _barcodeDetectedTime = null;
+    _holdProgress.value = 0.0;
+    _isHolding.value = false;
+    _holdTimer?.cancel();
   }
 
-  /// Handle barcode detection
-  /// Validates barcode and fetches nutrition data
-  Future<void> onBarcodeDetected(String barcode) async {
+  /// Validate barcode format
+  bool _isValidBarcode(String barcode) {
+    if (barcode.isEmpty || barcode.trim().isEmpty) return false;
+    
+    // Clean barcode - remove whitespace and common separators
+    final cleaned = barcode.trim().replaceAll(RegExp(r'[\s\-]'), '');
+    
+    // Remove any non-digit characters for validation
+    final digitsOnly = cleaned.replaceAll(RegExp(r'[^0-9]'), '');
+    
+    // Valid barcode lengths: EAN-13 (13), EAN-8 (8), UPC-A (12), UPC-E (6-8), Code128 (variable)
+    final validLengths = [6, 7, 8, 12, 13, 14];
+    if (!validLengths.contains(digitsOnly.length)) return false;
+    
+    // Must contain only digits (after cleaning) and be at least 6 digits
+    if (digitsOnly.length < 6) return false;
+    
+    // Additional validation: check if it looks like a valid barcode
+    // Most product barcodes start with specific prefixes
+    // But we'll be lenient and just check format
+    
+    return true;
+  }
+
+  /// Handle barcode detection with 2-second hold requirement
+  void onBarcodeDetected(String barcode) {
+    // Don't process if already loading or has result
+    if (_scanState.value == ScanState.loading || _scanState.value == ScanState.result) {
+      return;
+    }
+
+    // Validate barcode format
+    if (!_isValidBarcode(barcode)) {
+      _currentBarcode = null;
+      _barcodeDetectedTime = null;
+      _holdProgress.value = 0.0;
+      _isHolding.value = false;
+      _holdTimer?.cancel();
+      return;
+    }
+
+    // If same barcode is detected, continue holding
+    if (_currentBarcode == barcode && _barcodeDetectedTime != null) {
+      // Already holding this barcode, timer will handle it
+      return;
+    }
+
+    // New barcode detected - start hold timer
+    _currentBarcode = barcode;
+    _barcodeDetectedTime = DateTime.now();
+    _isHolding.value = true;
+    _holdProgress.value = 0.0;
+    
+    // Cancel previous timer if any
+    _holdTimer?.cancel();
+    
+    // Start 2-second hold timer
+    const holdDuration = Duration(seconds: 2);
+    final startTime = DateTime.now();
+    
+    _holdTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
+      if (_currentBarcode != barcode || _barcodeDetectedTime == null) {
+        // Barcode changed or reset, cancel timer
+        timer.cancel();
+        _holdProgress.value = 0.0;
+        _isHolding.value = false;
+        return;
+      }
+      
+      final elapsed = DateTime.now().difference(startTime);
+      final progress = elapsed.inMilliseconds / holdDuration.inMilliseconds;
+      
+      if (progress >= 1.0) {
+        // Hold complete - process the barcode
+        timer.cancel();
+        _holdProgress.value = 1.0;
+        _isHolding.value = false;
+        _processBarcode(barcode);
+      } else {
+        _holdProgress.value = progress;
+      }
+    });
+  }
+
+  /// Process barcode after successful 2-second hold
+  Future<void> _processBarcode(String barcode) async {
     try {
-      // Validate barcode
-      if (barcode.isEmpty || barcode.trim().isEmpty) {
-        _setError('Invalid barcode');
+      // Validate barcode one more time
+      if (!_isValidBarcode(barcode)) {
+        _setError('Invalid barcode format');
         return;
       }
 
-      // Prevent duplicate scans
+      // Prevent duplicate processing
       if (_scannedBarcode.value == barcode && _scanState.value == ScanState.loading) {
         return;
       }
@@ -64,6 +168,7 @@ class ScanController extends GetxController {
       _scannedBarcode.value = barcode;
       _scanState.value = ScanState.loading;
       _errorMessage.value = '';
+      _holdProgress.value = 0.0;
 
       // Fetch nutrition data using Gemini AI
       final nutrition = await _nutritionService.fetchNutrition(
@@ -85,16 +190,27 @@ class ScanController extends GetxController {
       final errorMsg = _getErrorMessage(e);
       _setError(errorMsg);
       _showSnackbar('Error', errorMsg);
+    } finally {
+      // Reset hold state
+      _currentBarcode = null;
+      _barcodeDetectedTime = null;
+      _holdProgress.value = 0.0;
+      _isHolding.value = false;
     }
   }
 
   /// Reset to idle state
   void reset() {
+    _holdTimer?.cancel();
     _scanState.value = ScanState.idle;
     _nutritionData.value = null;
     _errorMessage.value = '';
     _scannedBarcode.value = '';
     _productName.value = '';
+    _currentBarcode = null;
+    _barcodeDetectedTime = null;
+    _holdProgress.value = 0.0;
+    _isHolding.value = false;
   }
 
   /// Rescan - go back to scanning state
