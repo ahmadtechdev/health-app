@@ -26,12 +26,9 @@ class ScanController extends GetxController {
   final _scannedBarcode = ''.obs;
   final _productName = ''.obs; // For manual entry when barcode not found
   
-  // Barcode hold timer
-  String? _currentBarcode;
-  DateTime? _barcodeDetectedTime;
-  Timer? _holdTimer;
-  final _holdProgress = 0.0.obs; // 0.0 to 1.0 for 2 seconds
-  final _isHolding = false.obs;
+  // Silent delay timer
+  Timer? _delayTimer;
+  String? _pendingBarcode;
 
   // Getters
   ScanState get scanState => _scanState.value;
@@ -39,8 +36,6 @@ class ScanController extends GetxController {
   String get errorMessage => _errorMessage.value;
   String get scannedBarcode => _scannedBarcode.value;
   String get productName => _productName.value;
-  double get holdProgress => _holdProgress.value;
-  bool get isHolding => _isHolding.value;
   
   bool get isIdle => _scanState.value == ScanState.idle;
   bool get isScanning => _scanState.value == ScanState.scanning;
@@ -50,125 +45,74 @@ class ScanController extends GetxController {
 
   @override
   void onClose() {
-    _holdTimer?.cancel();
+    _delayTimer?.cancel();
     super.onClose();
   }
 
   /// Start scanning - reset state and prepare for new scan
   void startScanning() {
+    _delayTimer?.cancel();
+    _pendingBarcode = null;
     _scanState.value = ScanState.scanning;
     _errorMessage.value = '';
     _nutritionData.value = null;
     _scannedBarcode.value = '';
-    _currentBarcode = null;
-    _barcodeDetectedTime = null;
-    _holdProgress.value = 0.0;
-    _isHolding.value = false;
-    _holdTimer?.cancel();
   }
 
-  /// Validate barcode format
-  bool _isValidBarcode(String barcode) {
-    if (barcode.isEmpty || barcode.trim().isEmpty) return false;
-    
-    // Clean barcode - remove whitespace and common separators
-    final cleaned = barcode.trim().replaceAll(RegExp(r'[\s\-]'), '');
-    
-    // Remove any non-digit characters for validation
-    final digitsOnly = cleaned.replaceAll(RegExp(r'[^0-9]'), '');
-    
-    // Valid barcode lengths: EAN-13 (13), EAN-8 (8), UPC-A (12), UPC-E (6-8), Code128 (variable)
-    final validLengths = [6, 7, 8, 12, 13, 14];
-    if (!validLengths.contains(digitsOnly.length)) return false;
-    
-    // Must contain only digits (after cleaning) and be at least 6 digits
-    if (digitsOnly.length < 6) return false;
-    
-    // Additional validation: check if it looks like a valid barcode
-    // Most product barcodes start with specific prefixes
-    // But we'll be lenient and just check format
-    
-    return true;
-  }
-
-  /// Handle barcode detection with 2-second hold requirement
+  /// Handle barcode detection with silent 2-second delay
   void onBarcodeDetected(String barcode) {
     // Don't process if already loading or has result
     if (_scanState.value == ScanState.loading || _scanState.value == ScanState.result) {
       return;
     }
 
-    // Validate barcode format
-    if (!_isValidBarcode(barcode)) {
-      _currentBarcode = null;
-      _barcodeDetectedTime = null;
-      _holdProgress.value = 0.0;
-      _isHolding.value = false;
-      _holdTimer?.cancel();
+    // Validate barcode
+    if (barcode.isEmpty || barcode.trim().isEmpty) {
       return;
     }
 
-    // If same barcode is detected, continue holding
-    if (_currentBarcode == barcode && _barcodeDetectedTime != null) {
-      // Already holding this barcode, timer will handle it
+    // If same barcode detected, reset the timer
+    if (_pendingBarcode == barcode) {
+      // Same barcode still in view, reset timer
+      _delayTimer?.cancel();
+      _startDelayTimer(barcode);
       return;
     }
 
-    // New barcode detected - start hold timer
-    _currentBarcode = barcode;
-    _barcodeDetectedTime = DateTime.now();
-    _isHolding.value = true;
-    _holdProgress.value = 0.0;
-    
-    // Cancel previous timer if any
-    _holdTimer?.cancel();
-    
-    // Start 2-second hold timer
-    const holdDuration = Duration(seconds: 2);
-    final startTime = DateTime.now();
-    
-    _holdTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
-      if (_currentBarcode != barcode || _barcodeDetectedTime == null) {
-        // Barcode changed or reset, cancel timer
-        timer.cancel();
-        _holdProgress.value = 0.0;
-        _isHolding.value = false;
-        return;
-      }
-      
-      final elapsed = DateTime.now().difference(startTime);
-      final progress = elapsed.inMilliseconds / holdDuration.inMilliseconds;
-      
-      if (progress >= 1.0) {
-        // Hold complete - process the barcode
-        timer.cancel();
-        _holdProgress.value = 1.0;
-        _isHolding.value = false;
+    // New barcode detected - start delay timer
+    _pendingBarcode = barcode;
+    _delayTimer?.cancel();
+    _startDelayTimer(barcode);
+  }
+
+  /// Start 2-second delay timer before processing
+  void _startDelayTimer(String barcode) {
+    _delayTimer = Timer(const Duration(seconds: 2), () {
+      // After 2 seconds, process the barcode
+      if (_pendingBarcode == barcode && _scanState.value == ScanState.scanning) {
         _processBarcode(barcode);
-      } else {
-        _holdProgress.value = progress;
       }
     });
   }
 
-  /// Process barcode after successful 2-second hold
+  /// Process barcode after delay
   Future<void> _processBarcode(String barcode) async {
     try {
-      // Validate barcode one more time
-      if (!_isValidBarcode(barcode)) {
-        _setError('Invalid barcode format');
+      // Validate barcode
+      if (barcode.isEmpty || barcode.trim().isEmpty) {
+        _setError('Invalid barcode');
         return;
       }
 
-      // Prevent duplicate processing
+      // Prevent duplicate scans
       if (_scannedBarcode.value == barcode && _scanState.value == ScanState.loading) {
         return;
       }
 
       _scannedBarcode.value = barcode;
+      _pendingBarcode = null;
       _scanState.value = ScanState.loading;
       _errorMessage.value = '';
-      _holdProgress.value = 0.0;
 
       // Fetch nutrition data using Gemini AI
       final nutrition = await _nutritionService.fetchNutrition(
@@ -190,27 +134,18 @@ class ScanController extends GetxController {
       final errorMsg = _getErrorMessage(e);
       _setError(errorMsg);
       _showSnackbar('Error', errorMsg);
-    } finally {
-      // Reset hold state
-      _currentBarcode = null;
-      _barcodeDetectedTime = null;
-      _holdProgress.value = 0.0;
-      _isHolding.value = false;
     }
   }
 
   /// Reset to idle state
   void reset() {
-    _holdTimer?.cancel();
+    _delayTimer?.cancel();
+    _pendingBarcode = null;
     _scanState.value = ScanState.idle;
     _nutritionData.value = null;
     _errorMessage.value = '';
     _scannedBarcode.value = '';
     _productName.value = '';
-    _currentBarcode = null;
-    _barcodeDetectedTime = null;
-    _holdProgress.value = 0.0;
-    _isHolding.value = false;
   }
 
   /// Rescan - go back to scanning state

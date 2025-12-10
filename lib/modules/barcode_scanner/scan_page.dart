@@ -110,117 +110,34 @@ class _ScanPageState extends State<ScanPage> {
           },
         ),
         // Overlay with scanning box
-        _buildScanningOverlay(controller),
-        // Hold progress indicator
-        Obx(() => controller.isHolding
-            ? _buildHoldProgressIndicator(controller)
-            : const SizedBox.shrink()),
+        _buildScanningOverlay(),
         // Instructions
         Positioned(
           bottom: 40,
           left: 0,
           right: 0,
-          child: _buildInstructions(controller),
+          child: _buildInstructions(),
         ),
       ],
     );
   }
 
   /// Build scanning overlay with box
-  Widget _buildScanningOverlay(ScanController controller) {
+  Widget _buildScanningOverlay() {
     return Container(
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.5),
       ),
       child: CustomPaint(
         painter: ScannerOverlayPainter(),
-        child: Obx(() {
-          // Highlight scanning box when holding
-          if (controller.isHolding) {
-            return Container(
-              margin: EdgeInsets.only(
-                left: MediaQuery.of(context).size.width * 0.15,
-                right: MediaQuery.of(context).size.width * 0.15,
-                top: MediaQuery.of(context).size.height * 0.25,
-                bottom: MediaQuery.of(context).size.height * 0.25,
-              ),
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: TColors.primary,
-                  width: 3,
-                ),
-                borderRadius: BorderRadius.circular(16),
-              ),
-            );
-          }
-          return Container();
-        }),
-      ),
-    );
-  }
-
-  /// Build hold progress indicator
-  Widget _buildHoldProgressIndicator(ScanController controller) {
-    return Positioned(
-      top: MediaQuery.of(context).size.height * 0.25 - 30,
-      left: 0,
-      right: 0,
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          decoration: BoxDecoration(
-            color: TColors.primary.withOpacity(0.9),
-            borderRadius: BorderRadius.circular(25),
-            boxShadow: [
-              BoxShadow(
-                color: TColors.primary.withOpacity(0.3),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Hold steady...',
-                style: const TextStyle(
-                  color: TColors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                width: 200,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: LinearProgressIndicator(
-                    value: controller.holdProgress,
-                    backgroundColor: TColors.white.withOpacity(0.3),
-                    valueColor: const AlwaysStoppedAnimation<Color>(TColors.white),
-                    minHeight: 8,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${(controller.holdProgress * 2).toStringAsFixed(1)}s',
-                style: const TextStyle(
-                  color: TColors.white,
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-        ),
+        child: Container(),
       ),
     );
   }
 
   /// Build instructions text
-  Widget _buildInstructions(ScanController controller) {
-    return Obx(() => Container(
+  Widget _buildInstructions() {
+    return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -234,45 +151,26 @@ class _ScanPageState extends State<ScanPage> {
           ),
         ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                controller.isHolding ? MdiIcons.timerSand : MdiIcons.barcodeScan,
-                color: controller.isHolding ? TColors.primary : TColors.primary,
-                size: 24,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                controller.isHolding
-                    ? 'Keep barcode steady for 2 seconds...'
-                    : 'Position barcode in frame and hold for 2 seconds',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: TColors.textPrimary,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+          Icon(
+            MdiIcons.barcodeScan,
+            color: TColors.primary,
+            size: 24,
           ),
-          if (!controller.isHolding) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Hold the barcode steady until scanning completes',
-              style: TextStyle(
-                fontSize: 12,
-                color: TColors.textSecondary,
-              ),
-              textAlign: TextAlign.center,
+          const SizedBox(width: 12),
+          const Text(
+            'Position barcode or enter product name',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: TColors.textPrimary,
             ),
-          ],
+          ),
         ],
       ),
-    ));
+    );
   }
 
   /// Build loading view with shimmer

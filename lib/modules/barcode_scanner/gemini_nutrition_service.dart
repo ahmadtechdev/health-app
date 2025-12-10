@@ -110,15 +110,12 @@ class GeminiNutritionService {
 
   /// Create prompt for Gemini to extract nutrition information
   String _createNutritionPrompt(String barcode, String? productName) {
-    return """You are a nutrition data expert. Extract ACCURATE nutrition information for the EXACT product specified.
+    return """You are a nutrition data expert. Extract accurate nutrition information for the following product.
 
-IMPORTANT: Match the product based on the barcode provided. Do NOT guess or assume a different product.
+${productName != null ? 'Product Name: $productName' : ''}
+${barcode != 'unknown' ? 'Barcode: $barcode' : ''}
 
-${barcode != 'unknown' && barcode.isNotEmpty ? 'Barcode: $barcode\n' : ''}${productName != null && productName.isNotEmpty ? 'Product Name: $productName' : 'Product identified by barcode: $barcode'}
-
-CRITICAL: The barcode is the PRIMARY identifier. Use the barcode to identify the EXACT product. If you cannot identify the product from the barcode, provide nutrition data for a generic version of the product type, but clearly indicate this is an estimate.
-
-Provide nutrition information per 100g in EXACT JSON format. Use realistic values based on the ACTUAL product or very similar products.
+Provide nutrition information per 100g in EXACT JSON format. Use realistic values based on similar products if exact data is unavailable.
 
 Required JSON format (no markdown, no code blocks, just pure JSON):
 {
