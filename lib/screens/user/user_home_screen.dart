@@ -32,6 +32,7 @@ class UserHome extends StatefulWidget {
 class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   int _selectedIndex = 0;
+  String _userName = 'User';
 
   @override
   void initState() {
@@ -42,10 +43,30 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
         _selectedIndex = _tabController.index;
       });
     });
+    _loadUserName();
     // Check profile and show dialog if incomplete
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAndShowProfileDialog();
     });
+  }
+
+  /// Load user name from Firebase Auth
+  void _loadUserName() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      // Try to get display name first
+      if (user.displayName != null && user.displayName!.isNotEmpty) {
+        _userName = user.displayName!;
+      } else if (user.email != null) {
+        // Extract name from email (part before @)
+        final emailParts = user.email!.split('@');
+        final nameFromEmail = emailParts[0];
+        // Capitalize first letter
+        _userName = nameFromEmail[0].toUpperCase() + 
+                   (nameFromEmail.length > 1 ? nameFromEmail.substring(1) : '');
+      }
+      setState(() {});
+    }
   }
 
   @override
@@ -92,7 +113,7 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Hello, User',
+                'Hello, $_userName',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -116,47 +137,7 @@ class _UserHomeState extends State<UserHome> with SingleTickerProviderStateMixin
                 onPressed: _showLogoutDialog,
                 tooltip: 'Logout',
               ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: () {},
-                child: Hero(
-                  tag: 'profile',
-                  child: Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(21),
-                      border: Border.all(color: TColors.primary, width: 2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: TColors.accent.withOpacity(0.2),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: Image.asset(
-                        'assets/images/profile_placeholder.jpg',
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return CircleAvatar(
-                            backgroundColor: TColors.primary,
-                            child: Text(
-                              'U',
-                              style: TextStyle(
-                                color: TColors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+
             ],
           ),
         ],

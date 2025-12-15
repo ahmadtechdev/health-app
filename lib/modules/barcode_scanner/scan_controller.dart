@@ -24,6 +24,8 @@ class ScanController extends GetxController {
   final _errorMessage = ''.obs;
   final _scannedBarcode = ''.obs;
   final _productName = ''.obs; // For manual entry when barcode not found
+  DateTime? _lastScanTime;
+  static const Duration _scanCooldown = Duration(seconds: 8);
 
   // Getters
   ScanState get scanState => _scanState.value;
@@ -50,6 +52,13 @@ class ScanController extends GetxController {
   /// Validates barcode and fetches nutrition data
   Future<void> onBarcodeDetected(String barcode) async {
     try {
+      // Throttle rapid consecutive detections to avoid immediate re-scan
+      final now = DateTime.now();
+      if (_lastScanTime != null &&
+          now.difference(_lastScanTime!) < _scanCooldown) {
+        return;
+      }
+
       // Validate barcode
       if (barcode.isEmpty || barcode.trim().isEmpty) {
         _setError('Invalid barcode');
@@ -64,6 +73,7 @@ class ScanController extends GetxController {
       _scannedBarcode.value = barcode;
       _scanState.value = ScanState.loading;
       _errorMessage.value = '';
+      _lastScanTime = now;
 
       // Fetch nutrition data using Gemini AI
       final nutrition = await _nutritionService.fetchNutrition(
@@ -75,10 +85,10 @@ class ScanController extends GetxController {
         _nutritionData.value = nutrition;
         _scanState.value = ScanState.result;
       } else {
-        _setError('Unable to get nutrition data');
+        _setError('Product not found by barcode');
         _showSnackbar(
-          'Unable to get data', 
-          'Could not fetch nutrition information. Try entering the product name manually.',
+          'Barcode not found', 
+          'Product not found by barcode. You can search by product name instead.',
         );
       }
     } catch (e) {

@@ -3,10 +3,12 @@ import 'package:get/get.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../colors.dart';
 import '../food_diary/diary_controller.dart';
 import 'nutrition_model.dart';
 import 'scan_controller.dart';
+import 'admin_product_form_page.dart';
 
 /// Barcode Scanner Page
 /// Scans barcodes and displays nutrition information from OpenFoodFacts
@@ -21,6 +23,7 @@ class _ScanPageState extends State<ScanPage> {
   late MobileScannerController _scannerController;
   late ScanController _scanController;
   late DiaryController _diaryController;
+  bool _isAdmin = false;
 
   @override
   void initState() {
@@ -36,6 +39,8 @@ class _ScanPageState extends State<ScanPage> {
       detectionSpeed: DetectionSpeed.noDuplicates,
       facing: CameraFacing.back,
     );
+    final email = FirebaseAuth.instance.currentUser?.email?.toLowerCase() ?? '';
+    _isAdmin = email.contains('admin');
     // Start scanning when page loads
     _scanController.startScanning();
   }
@@ -83,7 +88,36 @@ class _ScanPageState extends State<ScanPage> {
         }
         return _buildScannerView(_scanController);
       }),
+      floatingActionButton:
+          _isAdmin ? _buildAdminFab(context, _scanController) : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
+  }
+
+  Widget _buildAdminFab(BuildContext context, ScanController controller) {
+    return FloatingActionButton.extended(
+      onPressed: () => _openAdminForm(controller),
+      backgroundColor: TColors.primary,
+      foregroundColor: TColors.white,
+      icon: const Icon(Icons.add),
+      label: const Text('Add product'),
+    );
+  }
+
+  Future<void> _openAdminForm(ScanController controller) async {
+    final result = await Get.to<NutritionModel?>(
+      () => AdminProductFormPage(
+        initialBarcode:
+            controller.scannedBarcode.isNotEmpty ? controller.scannedBarcode : null,
+        initialName: controller.nutritionData?.productName,
+      ),
+    );
+
+    // If admin saved a product, refresh the flow so the user can see it immediately
+    if (result?.barcode != null && result!.barcode!.isNotEmpty) {
+      controller.rescan();
+      controller.onBarcodeDetected(result.barcode!);
+    }
   }
 
   /// Build scanner view with camera
@@ -156,13 +190,13 @@ class _ScanPageState extends State<ScanPage> {
           Icon(
             MdiIcons.barcodeScan,
             color: TColors.primary,
-            size: 24,
+            size: 16,
           ),
           const SizedBox(width: 12),
               const Text(
                 'Position barcode or enter product name',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 10,
                   fontWeight: FontWeight.w500,
                   color: TColors.textPrimary,
                 ),

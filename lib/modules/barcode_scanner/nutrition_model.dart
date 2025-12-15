@@ -15,6 +15,7 @@ class NutritionModel {
   final double? sugar;
   final double? protein;
   final double? sodium;
+  final String? barcode;
   final Map<String, String> nutrientLevels; // e.g., {"fat": "high", "sugar": "medium"}
   final bool isFromGemini; // Indicates if data came from Gemini API
 
@@ -28,12 +29,16 @@ class NutritionModel {
     this.sugar,
     this.protein,
     this.sodium,
+    this.barcode,
     this.nutrientLevels = const {},
     this.isFromGemini = false,
   });
 
   /// Factory constructor to create NutritionModel from JSON
-  factory NutritionModel.fromJson(Map<String, dynamic> json) {
+  factory NutritionModel.fromOpenFoodJson(
+    Map<String, dynamic> json, {
+    String? barcode,
+  }) {
     final product = json['product'] as Map<String, dynamic>?;
     if (product == null) {
       throw Exception('Product data not found in API response');
@@ -173,8 +178,9 @@ class NutritionModel {
       sugar: sugar,
       protein: protein,
       sodium: sodium,
+      barcode: barcode,
       nutrientLevels: nutrientLevels,
-      isFromGemini: true, // All data now comes from Gemini AI
+      isFromGemini: false,
     );
   }
 
@@ -189,12 +195,33 @@ class NutritionModel {
     return null;
   }
 
+  /// Factory constructor to create NutritionModel from simple JSON (for caching)
+  factory NutritionModel.fromSimpleJson(Map<String, dynamic> json) {
+    return NutritionModel(
+      productName: json['productName'] as String? ?? 'Unknown Product',
+      brand: json['brand'] as String?,
+      imageUrl: json['imageUrl'] as String?,
+      barcode: json['barcode'] as String?,
+      calories: _parseDouble(json['calories']),
+      fat: _parseDouble(json['fat']),
+      carbs: _parseDouble(json['carbs']),
+      sugar: _parseDouble(json['sugar']),
+      protein: _parseDouble(json['protein']),
+      sodium: _parseDouble(json['sodium']),
+      nutrientLevels: (json['nutrientLevels'] as Map<String, dynamic>?)
+              ?.map((key, value) => MapEntry(key, value.toString())) ??
+          const {},
+      isFromGemini: json['isFromGemini'] as bool? ?? false,
+    );
+  }
+
   /// Convert to JSON (for potential storage)
   Map<String, dynamic> toJson() {
     return {
       'productName': productName,
       'brand': brand,
       'imageUrl': imageUrl,
+      'barcode': barcode,
       'calories': calories,
       'fat': fat,
       'carbs': carbs,
@@ -204,6 +231,37 @@ class NutritionModel {
       'nutrientLevels': nutrientLevels,
       'isFromGemini': isFromGemini,
     };
+  }
+
+  /// Create a copy with selective overrides (useful for merging sources)
+  NutritionModel copyWith({
+    String? productName,
+    String? brand,
+    String? imageUrl,
+    double? calories,
+    double? fat,
+    double? carbs,
+    double? sugar,
+    double? protein,
+    double? sodium,
+    String? barcode,
+    Map<String, String>? nutrientLevels,
+    bool? isFromGemini,
+  }) {
+    return NutritionModel(
+      productName: productName ?? this.productName,
+      brand: brand ?? this.brand,
+      imageUrl: imageUrl ?? this.imageUrl,
+      calories: calories ?? this.calories,
+      fat: fat ?? this.fat,
+      carbs: carbs ?? this.carbs,
+      sugar: sugar ?? this.sugar,
+      protein: protein ?? this.protein,
+      sodium: sodium ?? this.sodium,
+      barcode: barcode ?? this.barcode,
+      nutrientLevels: nutrientLevels ?? this.nutrientLevels,
+      isFromGemini: isFromGemini ?? this.isFromGemini,
+    );
   }
 }
 
