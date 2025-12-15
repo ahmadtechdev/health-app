@@ -25,7 +25,9 @@ class ScanController extends GetxController {
   final _scannedBarcode = ''.obs;
   final _productName = ''.obs; // For manual entry when barcode not found
   DateTime? _lastScanTime;
-  static const Duration _scanCooldown = Duration(seconds: 8);
+  DateTime? _readyAt;
+  static const Duration _scanCooldown = Duration(seconds: 5);
+  static const Duration _warmupDelay = Duration(seconds: 8); // Wait after camera opens
 
   // Getters
   ScanState get scanState => _scanState.value;
@@ -46,12 +48,18 @@ class ScanController extends GetxController {
     _errorMessage.value = '';
     _nutritionData.value = null;
     _scannedBarcode.value = '';
+    _readyAt = DateTime.now().add(_warmupDelay);
   }
 
   /// Handle barcode detection
   /// Validates barcode and fetches nutrition data
   Future<void> onBarcodeDetected(String barcode) async {
     try {
+      // Let the camera settle before accepting first detection
+      if (_readyAt != null && DateTime.now().isBefore(_readyAt!)) {
+        return;
+      }
+
       // Throttle rapid consecutive detections to avoid immediate re-scan
       final now = DateTime.now();
       if (_lastScanTime != null &&
